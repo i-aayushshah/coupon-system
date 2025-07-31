@@ -227,14 +227,23 @@ def get_user_stats():
 
         recent_redemptions.append(redemption_data)
 
-    # Get available public coupons count
+    # Get available public coupons count (excluding already redeemed ones)
     now = datetime.datetime.utcnow()
+
+    # First, get all coupon IDs that the user has redeemed
+    redeemed_coupon_ids = db.session.query(Redemption.coupon_id).filter(
+        Redemption.user_id == user.id
+    ).subquery()
+
+    # Then count available coupons excluding redeemed ones
     available_coupons = Coupon.query.filter(
         Coupon.is_public == True,
         Coupon.is_active == True,
         Coupon.start_date <= now,
         Coupon.end_date >= now,
         Coupon.current_uses < Coupon.max_uses
+    ).filter(
+        ~Coupon.id.in_(redeemed_coupon_ids)
     ).count()
 
     # Get monthly redemption trends (last 6 months)
@@ -326,20 +335,31 @@ def get_user_dashboard():
 
     # Calculate statistics
     total_redemptions = redemptions_query.count()
-    total_savings = sum(r[0].discount_applied for r in redemptions)
+    total_savings = db.session.query(db.func.sum(Redemption.discount_applied)).filter(
+        Redemption.user_id == user.id
+    ).scalar() or 0
 
     # Get order statistics
     total_orders = Order.query.filter_by(user_id=user.id).count()
     total_spent = db.session.query(db.func.sum(Order.final_total)).filter_by(user_id=user.id).scalar() or 0
 
-    # Get available public coupons
+    # Get available public coupons (excluding already redeemed ones)
     now = datetime.datetime.utcnow()
+
+    # First, get all coupon IDs that the user has redeemed
+    redeemed_coupon_ids = db.session.query(Redemption.coupon_id).filter(
+        Redemption.user_id == user.id
+    ).subquery()
+
+    # Then get available coupons excluding redeemed ones
     available_coupons = Coupon.query.filter(
         Coupon.is_public == True,
         Coupon.is_active == True,
         Coupon.start_date <= now,
         Coupon.end_date >= now,
         Coupon.current_uses < Coupon.max_uses
+    ).filter(
+        ~Coupon.id.in_(redeemed_coupon_ids)
     ).limit(5).all()
 
     # Format available coupons

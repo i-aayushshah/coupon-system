@@ -25,11 +25,13 @@ const Dashboard = () => {
           couponAPI.getUserRedemptions(1, 5)
         ]);
 
+
+
         setStats({
-          totalRedeemed: statsData.total_redemptions || 0,
-          totalSavings: statsData.total_savings || 0,
-          availableCoupons: statsData.available_coupons || 0,
-          recentRedemptions: redemptionsData.redemptions || []
+          totalRedeemed: statsData.stats?.total_redemptions || 0,
+          totalSavings: statsData.stats?.total_savings || 0,
+          availableCoupons: statsData.stats?.available_coupons || 0,
+          recentRedemptions: statsData.recent_redemptions || redemptionsData.redemptions || []
         });
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -143,10 +145,10 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-green-600">
-                      -{formatCurrency(redemption.discount_amount)}
+                      -{formatCurrency(redemption.discount_applied)}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Order: {formatCurrency(redemption.original_amount)}
+                      Order: {formatCurrency(redemption.order?.final_total || 0)}
                     </p>
                   </div>
                 </div>

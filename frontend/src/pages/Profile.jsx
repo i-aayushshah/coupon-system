@@ -314,19 +314,19 @@ const Profile = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <StatsCard
                     title="Total Redemptions"
-                    value={stats.total_redemptions || 0}
+                    value={stats.stats?.total_redemptions || 0}
                     subtitle="Coupons used"
                     color="blue"
                   />
                   <StatsCard
                     title="Total Savings"
-                    value={formatCurrency(stats.total_savings || 0)}
+                    value={formatCurrency(stats.stats?.total_savings || 0)}
                     subtitle="Money saved"
                     color="green"
                   />
                   <StatsCard
                     title="Available Coupons"
-                    value={stats.available_coupons || 0}
+                    value={stats.stats?.available_coupons || 0}
                     subtitle="Ready to use"
                     color="purple"
                   />
