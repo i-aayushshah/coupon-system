@@ -79,7 +79,7 @@ def register():
     db.session.commit()
 
     # Send verification email (mock)
-    verify_url = f"http://localhost:3000/verify-email?token={verification_token}&email={email}"
+    verify_url = f"http://localhost:3000/verify-email/{verification_token}?email={email}"
     subject = "Verify your email"
     body = f"Hi {first_name},\n\nPlease verify your email by clicking the link below:\n{verify_url}\n\nIf you did not register, ignore this email."
     send_email(email, subject, body)
@@ -191,7 +191,7 @@ def resend_verification():
     db.session.commit()
 
     # Send new verification email
-    verify_url = f"http://localhost:3000/verify-email?token={new_verification_token}&email={email}"
+    verify_url = f"http://localhost:3000/verify-email/{new_verification_token}?email={email}"
     subject = "Verify your email"
     body = f"Hi {user.first_name},\n\nPlease verify your email by clicking the link below:\n{verify_url}\n\nIf you did not register, ignore this email."
     send_email(email, subject, body)
@@ -213,11 +213,29 @@ def forgot_password():
     user.password_reset_token = reset_token
     user.password_reset_expires = expires
     db.session.commit()
-    reset_url = f"http://localhost:3000/reset-password?token={reset_token}&email={email}"
+    reset_url = f"http://localhost:3000/reset-password/{reset_token}?email={email}"
     subject = "Password Reset Request"
     body = f"Hi {user.first_name},\n\nTo reset your password, click the link below:\n{reset_url}\n\nIf you did not request this, ignore this email."
     send_email(email, subject, body)
     return jsonify({'message': 'If the email exists, a reset link has been sent.'}), 200
+
+# GET /api/auth/validate-reset-token
+@bp.route('/validate-reset-token', methods=['GET'])
+def validate_reset_token():
+    token = request.args.get('token', '').strip()
+    email = request.args.get('email', '').strip().lower()
+
+    if not token or not email:
+        return jsonify({'error': 'Missing token or email'}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user or user.password_reset_token != token:
+        return jsonify({'error': 'Invalid token or email'}), 400
+
+    if not user.password_reset_expires or user.password_reset_expires < datetime.datetime.utcnow():
+        return jsonify({'error': 'Reset token expired'}), 400
+
+    return jsonify({'message': 'Token is valid', 'email': email}), 200
 
 # POST /api/auth/reset-password
 @bp.route('/reset-password', methods=['POST'])
@@ -225,14 +243,18 @@ def reset_password():
     data = request.get_json()
     email = data.get('email', '').strip().lower()
     token = data.get('token', '').strip()
-    new_password = data.get('password', '')
+    new_password = data.get('new_password', '')
+
     if not email or not token or not new_password:
         return jsonify({'error': 'Missing required fields'}), 400
+
     user = User.query.filter_by(email=email).first()
     if not user or user.password_reset_token != token:
         return jsonify({'error': 'Invalid token or email'}), 400
+
     if not user.password_reset_expires or user.password_reset_expires < datetime.datetime.utcnow():
         return jsonify({'error': 'Reset token expired'}), 400
+
     user.password_hash = hash_password(new_password)
     user.password_reset_token = None
     user.password_reset_expires = None
@@ -255,6 +277,7 @@ def me():
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
-        'is_admin': user.is_admin
+        'is_admin': user.is_admin,
+        'created_at': user.created_at.isoformat() if user.created_at else None
     }
     return jsonify({'user': profile}), 200
