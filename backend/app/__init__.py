@@ -8,12 +8,14 @@ import os
 
 load_dotenv()
 
-db = SQLAlchemy()
+db = SQLAlchemy()  # Shared DB instance
 jwt = JWTManager()
 mail = Mail()
 
-from app.models import *  # <-- Import models at module level
-from app.routes.auth import bp as auth_bp
+from app.models import * # Imported at module level to resolve SyntaxError
+from app.routes.test_db import bp as test_db_bp
+from app.routes.auth import bp as auth_bp # New: Registered auth blueprint
+from app.routes.admin import bp as admin_bp # New: Registered admin blueprint
 
 def create_app():
     app = Flask(__name__)
@@ -23,9 +25,9 @@ def create_app():
     jwt.init_app(app)
     mail.init_app(app)
 
-    from app.routes.test_db import bp as test_db_bp
     app.register_blueprint(test_db_bp)
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(auth_bp) # New: Registered auth blueprint
+    app.register_blueprint(admin_bp) # New: Registered admin blueprint
 
     @app.route('/')
     def hello():
