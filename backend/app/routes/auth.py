@@ -60,6 +60,7 @@ def register():
 
     password_hash = hash_password(password)
     verification_token = str(uuid.uuid4())
+    verification_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=24)  # 24 hour expiration
 
     user = User(
         username=username,
@@ -70,6 +71,7 @@ def register():
         is_admin=False,
         email_verified=False,
         email_verification_token=verification_token,
+        email_verification_expires=verification_expires,
         created_at=datetime.datetime.utcnow(),
         updated_at=datetime.datetime.utcnow()
     )
@@ -90,13 +92,42 @@ def login():
     data = request.get_json()
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
+    resend_verification = data.get('resend_verification', False)
+
     if not email or not password:
         return jsonify({'error': 'Missing email or password'}), 400
+
     user = User.query.filter_by(email=email).first()
     if not user or not check_password(password, user.password_hash):
         return jsonify({'error': 'Invalid email or password'}), 401
+
     if not user.email_verified:
-        return jsonify({'error': 'Email not verified'}), 403
+        if resend_verification:
+            # Generate new verification token
+            new_verification_token = str(uuid.uuid4())
+            new_verification_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+            user.email_verification_token = new_verification_token
+            user.email_verification_expires = new_verification_expires
+            user.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
+
+            # Send new verification email
+            verify_url = f"http://localhost:3000/verify-email?token={new_verification_token}&email={email}"
+            subject = "Verify your email"
+            body = f"Hi {user.first_name},\n\nPlease verify your email by clicking the link below:\n{verify_url}\n\nIf you did not register, ignore this email."
+            send_email(email, subject, body)
+
+            return jsonify({
+                'error': 'Email not verified',
+                'message': 'A new verification email has been sent to your email address.',
+                'resend_verification_sent': True
+            }), 403
+        else:
+            return jsonify({
+                'error': 'Email not verified',
+                'message': 'Please verify your email before logging in. You can request a new verification link by setting resend_verification to true.',
+                'resend_verification_available': True
+            }), 403
 
     # Create JWT identity with just the user ID as string
     access_token = create_access_token(identity=str(user.id))
@@ -126,12 +157,46 @@ def verify_email():
         return jsonify({'message': 'Email already verified.'}), 200
     if user.email_verification_token != token:
         return jsonify({'error': 'Invalid verification token'}), 400
-    # Optionally, add token expiration logic here
+    if not user.email_verification_expires or user.email_verification_expires < datetime.datetime.utcnow():
+        return jsonify({'error': 'Verification token has expired. Please request a new one.'}), 400
     user.email_verified = True
     user.email_verification_token = None
+    user.email_verification_expires = None
     user.updated_at = datetime.datetime.utcnow()
     db.session.commit()
     return jsonify({'message': 'Email verified successfully.'}), 200
+
+# POST /api/auth/resend-verification
+@bp.route('/resend-verification', methods=['POST'])
+def resend_verification():
+    data = request.get_json()
+    email = data.get('email', '').strip().lower()
+    if not email:
+        return jsonify({'error': 'Missing email'}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        # Don't reveal if email exists or not for security
+        return jsonify({'message': 'If the email exists, a verification link has been sent.'}), 200
+
+    if user.email_verified:
+        return jsonify({'message': 'Email is already verified.'}), 200
+
+    # Generate new verification token
+    new_verification_token = str(uuid.uuid4())
+    new_verification_expires = datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+    user.email_verification_token = new_verification_token
+    user.email_verification_expires = new_verification_expires
+    user.updated_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    # Send new verification email
+    verify_url = f"http://localhost:3000/verify-email?token={new_verification_token}&email={email}"
+    subject = "Verify your email"
+    body = f"Hi {user.first_name},\n\nPlease verify your email by clicking the link below:\n{verify_url}\n\nIf you did not register, ignore this email."
+    send_email(email, subject, body)
+
+    return jsonify({'message': 'If the email exists, a verification link has been sent.'}), 200
 
 # POST /api/auth/forgot-password
 @bp.route('/forgot-password', methods=['POST'])

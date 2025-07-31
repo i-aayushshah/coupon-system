@@ -15,6 +15,7 @@ class User(db.Model):
     is_admin = Column(Boolean, default=False)
     email_verified = Column(Boolean, default=False)
     email_verification_token = Column(String(128))
+    email_verification_expires = Column(DateTime)
     password_reset_token = Column(String(128))
     password_reset_expires = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
