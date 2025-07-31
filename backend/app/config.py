@@ -4,7 +4,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///coupon.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt-secret')
+    JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '0wEYNFZhLMOHOEnTek_OTYhG9Go1KrQ9RGasrzoDeItUDh26oiyif7X6rL4GYZ_BbltF0O_4dai3341rBf7N3Q==')
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'localhost')
     MAIL_PORT = int(os.getenv('MAIL_PORT', 25))
     MAIL_USERNAME = os.getenv('MAIL_USERNAME', '')
