@@ -26,15 +26,46 @@ coupon-system/
 │   │   └── config.py
 │   ├── requirements.txt
 │   ├── .env.example
-│   └── run.py
+│   ├── run.py
+│   ├── create_admin.py
+│   ├── verify_admin.py
+│   └── migrate_add_last_login.py
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── FormComponents.jsx
+│   │   │   ├── AdminLayout.jsx
+│   │   │   ├── AdminRoute.jsx
+│   │   │   ├── ActivityNotification.jsx
+│   │   │   └── CouponCard.jsx
 │   │   ├── pages/
+│   │   │   ├── admin/
+│   │   │   │   ├── AdminDashboard.jsx
+│   │   │   │   ├── ManageCoupons.jsx
+│   │   │   │   ├── CouponForm.jsx
+│   │   │   │   ├── ManageProducts.jsx
+│   │   │   │   ├── ProductForm.jsx
+│   │   │   │   ├── ImportProducts.jsx
+│   │   │   │   ├── Users.jsx
+│   │   │   │   ├── Activities.jsx
+│   │   │   │   └── Settings.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── Coupons.jsx
+│   │   │   ├── Products.jsx
+│   │   │   ├── Cart.jsx
+│   │   │   └── RedemptionHistory.jsx
 │   │   ├── utils/
+│   │   │   └── api.js
 │   │   └── hooks/
+│   │       └── useAuth.js
+│   ├── public/
+│   │   └── uploads/
 │   ├── package.json
 │   └── .env.example
+├── sample_products_electronics.csv
+├── sample_products_clothing.csv
+├── ADMIN_SETUP.md
 ├── .gitignore
 └── README.md
 ```
@@ -55,6 +86,11 @@ coupon-system/
 3. Copy `.env.example` to `.env` and fill in values
 4. `npm start` to run React app (runs on http://localhost:3000)
 
+### Admin Setup
+1. Run the admin creation script: `python create_admin.py`
+2. Default admin credentials: `aayushshah714@gmail.com` / `Aayush_123!`
+3. Admin users will be automatically redirected to `/admin` dashboard
+
 ## Tech Stack
 - **Backend:** Flask, Flask-SQLAlchemy, Flask-JWT-Extended, Flask-Mail, Flask-CORS, python-dotenv, bcrypt, SQLite
 - **Frontend:** React, TailwindCSS, Axios, React Router DOM, React Hook Form, React Hot Toast
@@ -68,15 +104,18 @@ coupon-system/
 - **Role-based access control** (Admin/User)
 - **Password hashing** with bcrypt
 - **Account deletion** with password verification
+- **Last login tracking** for user activity monitoring
 
-### 🏪 Product Management System
+### 🏪 Enhanced Product Management System
 - **Complete product CRUD** operations (Create, Read, Update, Delete)
 - **Product categories** and brand management
 - **Stock quantity tracking** with low stock alerts
 - **SKU management** with uniqueness validation
-- **Bulk product upload** via CSV
-- **Product images** and descriptions
+- **Bulk product upload** via CSV with enhanced error handling
+- **Product images** with local storage and preview
 - **Minimum order values** per product
+- **Advanced search and filtering** across all product fields
+- **Real-time stock status** indicators
 
 ### 🛒 Cart & Order System
 - **Shopping cart management** with add/update/remove items
@@ -85,6 +124,7 @@ coupon-system/
 - **Order history** and status tracking
 - **Order items** with quantity and pricing
 - **Shipping address** and payment method tracking
+- **Duplicate product prevention** in cart
 
 ### 🎫 Enhanced Coupon System
 - **Public and private coupons** with visibility controls
@@ -99,34 +139,49 @@ coupon-system/
 - **Double redemption prevention** with database constraints
 - **Coupon search and filtering** by code, title, discount type
 - **Real-time coupon validation** without redemption
+- **Coupon application flow** with redirect to cart
 
 ### 👤 User Features
 - **Profile management** (view/update personal information)
 - **Password change** with current password verification
 - **User dashboard** with comprehensive statistics
-- **Redemption history** with order details
+- **Redemption history** with order details and date filtering
 - **Savings tracking** and analytics
 - **Favorite categories** and spending patterns
 - **Monthly redemption trends**
+- **Forgot password** integration
 
-### 👨‍💼 Admin Features
+### 👨‍💼 Enhanced Admin Panel
 - **Complete coupon management** (CRUD operations)
-- **Product management** with bulk operations
-- **Advanced dashboard** with comprehensive analytics:
-  - Total coupons, products, orders, and revenue
+- **Product management** with bulk operations and advanced search
+- **User management** with role and status controls
+- **Comprehensive dashboard** with real-time analytics:
+  - Total users, active coupons, total redemptions, total revenue
   - Active/inactive statistics
   - Most redeemed coupons
   - Top selling products
   - Recent redemptions with order context
   - Low stock product alerts
-- **Redemption tracking** with user and order details
-- **Bulk product upload** via CSV
+- **Activities monitoring** with pagination and filtering
+- **Admin settings** with profile and password management
+- **Real-time notifications** for system activities
+- **Bulk product upload** via CSV with enhanced validation
+- **Image upload** functionality for products
+
+### 🔍 Advanced Search & Filtering
+- **Product search** across name, description, SKU, brand, category
+- **Real-time search** with debounced input
+- **Category filtering** with dynamic dropdown
+- **Status filtering** (active/inactive)
+- **Clear filters** functionality
+- **Pagination** with server-side processing
 
 ### 📊 Analytics & Reporting
 - **User analytics:** Redemption patterns, savings, category preferences
 - **Admin analytics:** Revenue tracking, product performance, coupon effectiveness
 - **Real-time statistics** for dashboards
 - **Historical data** for trend analysis
+- **Activity monitoring** with detailed logs
 
 ## API Overview
 
@@ -137,7 +192,7 @@ coupon-system/
 - `POST /api/auth/resend-verification` — Resend verification email
 - `POST /api/auth/forgot-password` — Request password reset
 - `POST /api/auth/reset-password` — Reset password with token
-- `GET /api/auth/me` — Get current user profile
+- `GET /api/auth/me` — Get current user profile (enhanced with phone, email_verified, last_login)
 
 ### Admin Endpoints
 #### Coupon Management
@@ -150,14 +205,28 @@ coupon-system/
 
 #### Product Management
 - `POST /api/admin/products` — Create new product
-- `GET /api/admin/products` — List all products with pagination and filters
+- `GET /api/admin/products` — List all products with pagination, search, and filters
 - `GET /api/admin/products/<id>` — Get specific product details
 - `PUT /api/admin/products/<id>` — Update product
 - `DELETE /api/admin/products/<id>` — Delete product
-- `POST /api/admin/products/bulk-upload` — Bulk upload products via CSV
+- `POST /api/admin/products/bulk-upload` — Bulk upload products via CSV with enhanced error handling
+- `POST /api/admin/upload-image` — Upload product images
 
-#### Analytics
+#### User Management
+- `GET /api/admin/users` — List all users with pagination and search
+- `GET /api/admin/users/<id>` — Get specific user details
+- `PUT /api/admin/users/<id>/role` — Update user role
+- `PUT /api/admin/users/<id>/status` — Update user status
+- `GET /api/admin/users/<id>/stats` — Get user statistics
+
+#### Analytics & Activities
 - `GET /api/admin/dashboard` — Comprehensive admin dashboard with enhanced stats
+- `GET /api/admin/activities` — Get system activities with pagination and filtering
+- `GET /api/admin/categories` — Get unique product categories
+
+#### Admin Profile
+- `PUT /api/admin/profile` — Update admin profile
+- `PUT /api/admin/profile/password` — Update admin password
 
 ### Public Coupon Endpoints
 - `GET /api/coupons/public` — List public active coupons with enhanced fields
@@ -188,6 +257,7 @@ coupon-system/
 - `POST /api/user/delete-account` — Delete account with password verification
 - `GET /api/user/stats` — Enhanced user statistics with order data
 - `GET /api/user/dashboard` — Enhanced user dashboard with order context
+- `GET /api/user/redemptions` — User redemption history with date filtering
 
 ## Enhanced Coupon Features
 
@@ -210,6 +280,48 @@ All coupon endpoints now return enhanced fields:
   "first_time_user_only": false
 }
 ```
+
+## Recent Improvements & Bug Fixes
+
+### 🔧 Enhanced CSV Import System
+- **Improved error handling** with detailed row-specific error messages
+- **Safe data parsing** for all numeric fields (price, stock_quantity, minimum_order_value)
+- **Better validation** for required fields and data formats
+- **Database transaction safety** with proper commit/rollback handling
+- **Debug logging** for import progress tracking
+
+### 🔍 Advanced Search & Filtering
+- **Real-time search** with 500ms debounced input
+- **Multi-field search** across product name, description, SKU, brand, category
+- **Server-side filtering** for better performance
+- **Category and status filters** with dynamic dropdowns
+- **Clear filters** functionality for easy reset
+
+### 👨‍💼 Enhanced Admin Panel
+- **Activity monitoring** with pagination and filtering
+- **Admin settings page** with profile and password management
+- **Real-time notifications** for system activities
+- **Enhanced user management** with role and status controls
+- **Improved dashboard** with accurate statistics
+
+### 🛒 Cart & Checkout Improvements
+- **Duplicate product prevention** in cart
+- **Enhanced coupon application** flow with redirect to cart
+- **Better error handling** for checkout process
+- **Improved toast notifications** with proper error messages
+
+### 🔐 Security Enhancements
+- **Consistent password hashing** with bcrypt
+- **Last login tracking** for user activity
+- **Enhanced profile management** with phone number support
+- **Forgot password** integration in admin settings
+
+### 📱 UI/UX Improvements
+- **Responsive design** for all admin pages
+- **Loading states** and error handling
+- **Toast notifications** for user feedback
+- **Enhanced form validation** and error messages
+- **Better pagination** with server-side processing
 
 ## Environment Variables
 
@@ -294,18 +406,21 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/cart/add" -Method POST -Body $
 - **Email verification** required for login
 - **Password hashing** with bcrypt
 - **Token expiration** handling
+- **Last login tracking** for security monitoring
 
 ### Data Validation
 - **Input sanitization** for all user inputs
 - **Type validation** for enhanced coupon fields
 - **Business rule validation** (date ranges, discount limits)
 - **Database constraints** for data integrity
+- **CSV import validation** with detailed error reporting
 
 ### Error Handling
 - **Comprehensive error messages** for validation failures
 - **Proper HTTP status codes** for different error types
 - **Transaction rollback** for failed operations
 - **Graceful degradation** for missing data
+- **Enhanced error logging** for debugging
 
 ### Production Considerations
 - **Rate limiting** recommended for production
@@ -313,11 +428,12 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/cart/add" -Method POST -Body $
 - **Logging and monitoring** for system health
 - **Backup strategies** for data protection
 - **HTTPS enforcement** for security
+- **Image upload security** with file validation
 
 ## Database Schema
 
 ### Core Tables
-- **users:** User accounts with authentication data
+- **users:** User accounts with authentication data and last_login tracking
 - **coupons:** Coupon definitions with enhanced fields
 - **redemptions:** Coupon usage tracking with order context
 - **products:** Product catalog with inventory management
@@ -327,7 +443,8 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/cart/add" -Method POST -Body $
 ### Enhanced Fields
 - **Coupons:** minimum_order_value, applicable_categories, maximum_discount_amount, first_time_user_only
 - **Redemptions:** order_id, original_amount, final_amount, products_applied_to
-- **Products:** category, brand, sku, stock_quantity, minimum_order_value
+- **Products:** category, brand, sku, stock_quantity, minimum_order_value, image_url
+- **Users:** phone_number, email_verified, last_login
 
 ## Contributing
 
