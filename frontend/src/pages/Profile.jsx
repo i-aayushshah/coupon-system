@@ -49,8 +49,7 @@ const Profile = () => {
       resetProfile({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        email: user.email || '',
-        username: user.username || ''
+        phone: user.phone || ''
       });
     }
   }, [user, resetProfile]);
@@ -58,8 +57,15 @@ const Profile = () => {
   const onProfileSubmit = async (data) => {
     setLoading(true);
     try {
-      const updatedUser = await userAPI.updateProfile(data);
-      updateUser(updatedUser.user);
+      // Only send allowed fields to the backend
+      const allowedData = {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        phone: data.phone
+      };
+
+      const response = await userAPI.updateProfile(allowedData);
+      updateUser(response.profile);
       toast.success('Profile updated successfully!');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to update profile');
@@ -133,7 +139,7 @@ const Profile = () => {
         {activeTab === 'profile' && (
           <Card>
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Personal Information</h2>
-            <form onSubmit={handleProfileSubmit} className="space-y-6">
+            <form onSubmit={handleProfileSubmit(onProfileSubmit)} method="POST" className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Input
                   label="First Name"
@@ -159,34 +165,37 @@ const Profile = () => {
                 />
               </div>
 
-              <Input
-                label="Username"
-                error={profileErrors.username?.message}
-                {...registerProfile('username', {
-                  required: 'Username is required',
-                  minLength: {
-                    value: 3,
-                    message: 'Username must be at least 3 characters'
-                  },
-                  pattern: {
-                    value: /^[a-zA-Z0-9_]+$/,
-                    message: 'Username can only contain letters, numbers, and underscores'
-                  }
-                })}
-              />
+                             <div>
+                 <Input
+                   label="Username"
+                   value={user?.username || ''}
+                   disabled={true}
+                   className="bg-gray-50"
+                 />
+                 <p className="text-sm text-gray-500 mt-1">Username cannot be changed for security reasons</p>
+               </div>
 
-              <Input
-                label="Email Address"
-                type="email"
-                error={profileErrors.email?.message}
-                {...registerProfile('email', {
-                  required: 'Email is required',
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address'
-                  }
-                })}
-              />
+               <div>
+                 <Input
+                   label="Email Address"
+                   type="email"
+                   value={user?.email || ''}
+                   disabled={true}
+                   className="bg-gray-50"
+                 />
+                 <p className="text-sm text-gray-500 mt-1">Email cannot be changed for security reasons</p>
+               </div>
+
+               <Input
+                 label="Phone Number"
+                 error={profileErrors.phone?.message}
+                 {...registerProfile('phone', {
+                   pattern: {
+                     value: /^[\+]?[1-9][\d]{0,15}$/,
+                     message: 'Please enter a valid phone number'
+                   }
+                 })}
+               />
 
               <div className="flex justify-end">
                 <Button
@@ -218,7 +227,7 @@ const Profile = () => {
                   </Button>
                 </div>
               ) : (
-                <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
                   <Input
                     label="Current Password"
                     type="password"
