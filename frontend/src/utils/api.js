@@ -204,6 +204,16 @@ export const adminAPI = {
     return response.data;
   },
 
+  updateAdminPassword: async (passwordData) => {
+    const response = await api.put('/api/admin/profile/password', passwordData);
+    return response.data;
+  },
+
+  updateAdminProfile: async (profileData) => {
+    const response = await api.put('/api/admin/profile', profileData);
+    return response.data;
+  },
+
   // Coupons
   createCoupon: async (couponData) => {
     const response = await api.post('/api/admin/coupons', couponData);

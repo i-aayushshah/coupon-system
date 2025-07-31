@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Button } from './FormComponents';
+import ActivityNotification from './ActivityNotification';
 import toast from 'react-hot-toast';
 
 const AdminLayout = ({ children }) => {
@@ -22,8 +23,7 @@ const AdminLayout = ({ children }) => {
     { name: 'Coupons', href: '/admin/coupons', icon: '🎫' },
     { name: 'Products', href: '/admin/products', icon: '📦' },
     { name: 'Users', href: '/admin/users', icon: '👥' },
-            { name: 'Activities', href: '/admin/activities', icon: '📊' },
-    { name: 'Reports', href: '/admin/reports', icon: '📈' },
+    { name: 'Activities', href: '/admin/activities', icon: '📊' },
     { name: 'Settings', href: '/admin/settings', icon: '⚙️' },
   ];
 
@@ -143,16 +143,8 @@ const AdminLayout = ({ children }) => {
           <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
             <div className="flex flex-1"></div>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
-              {/* Notifications */}
-              <button
-                type="button"
-                className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500"
-              >
-                <span className="sr-only">View notifications</span>
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                </svg>
-              </button>
+              {/* Activity Notifications */}
+              <ActivityNotification />
 
               {/* Profile dropdown */}
               <div className="relative">

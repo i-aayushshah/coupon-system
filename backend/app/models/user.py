@@ -25,5 +25,13 @@ class User(db.Model):
     coupons = relationship('Coupon', back_populates='creator', cascade='all, delete-orphan')
     redemptions = relationship('Redemption', back_populates='user', cascade='all, delete-orphan')
 
+    def set_password(self, password):
+        import bcrypt
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+
+    def check_password(self, password):
+        import bcrypt
+        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+
     def __repr__(self):
         return f'<User {self.username}>'

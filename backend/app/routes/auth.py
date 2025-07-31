@@ -292,7 +292,10 @@ def me():
         'email': user.email,
         'first_name': user.first_name,
         'last_name': user.last_name,
+        'phone_number': user.phone,
         'is_admin': user.is_admin,
+        'email_verified': user.email_verified,
+        'last_login': user.last_login.isoformat() if user.last_login else None,
         'created_at': user.created_at.isoformat() if user.created_at else None
     }
     return jsonify({'user': profile}), 200

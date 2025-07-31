@@ -1267,3 +1267,71 @@ def upload_image():
 
     except Exception as e:
         return jsonify({'error': f'Failed to upload image: {str(e)}'}), 500
+
+# PUT /api/admin/profile - Update admin profile
+@bp.route('/profile', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_admin_profile():
+    try:
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        # Update allowed fields
+        allowed_fields = ['first_name', 'last_name', 'phone']
+        updated_fields = []
+
+        for field in allowed_fields:
+            if field in data:
+                setattr(user, field, data[field].strip())
+                updated_fields.append(field)
+
+        if updated_fields:
+            user.updated_at = datetime.datetime.utcnow()
+            db.session.commit()
+
+            return jsonify({
+                'message': 'Profile updated successfully',
+                'updated_fields': updated_fields
+            }), 200
+        else:
+            return jsonify({'error': 'No valid fields to update'}), 400
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to update profile: {str(e)}'}), 500
+
+# PUT /api/admin/profile/password - Update admin password
+@bp.route('/profile/password', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_admin_password():
+    try:
+        data = request.get_json()
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+
+        if not current_password or not new_password:
+            return jsonify({'error': 'Current password and new password are required'}), 400
+
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+
+        if not user.check_password(current_password):
+            return jsonify({'error': 'Current password is incorrect'}), 400
+
+        # Validate new password
+        if len(new_password) < 8:
+            return jsonify({'error': 'New password must be at least 8 characters long'}), 400
+
+        # Update password
+        user.set_password(new_password)
+        db.session.commit()
+
+        return jsonify({'message': 'Password updated successfully'}), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to update password: {str(e)}'}), 500
