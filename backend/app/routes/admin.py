@@ -305,18 +305,44 @@ def bulk_upload_products():
                     error_count += 1
                     continue
 
+                # Parse price safely
+                try:
+                    price = float(row['price'])
+                except (ValueError, TypeError):
+                    errors.append(f'Row {row_num}: Invalid price format - {row["price"]}')
+                    error_count += 1
+                    continue
+
+                # Parse minimum_order_value safely
+                minimum_order_value = None
+                if row.get('minimum_order_value') and row.get('minimum_order_value').strip():
+                    try:
+                        minimum_order_value = float(row.get('minimum_order_value'))
+                    except (ValueError, TypeError):
+                        errors.append(f'Row {row_num}: Invalid minimum_order_value format - {row.get("minimum_order_value")}')
+                        error_count += 1
+                        continue
+
+                # Parse stock_quantity safely
+                try:
+                    stock_quantity = int(row.get('stock_quantity', 0))
+                except (ValueError, TypeError):
+                    errors.append(f'Row {row_num}: Invalid stock_quantity format - {row.get("stock_quantity")}')
+                    error_count += 1
+                    continue
+
                 # Create product
                 product = Product(
                     name=row['name'].strip(),
                     description=row.get('description', '').strip(),
-                    price=float(row['price']),
+                    price=price,
                     category=row.get('category', '').strip() or 'All',
                     brand=row.get('brand', '').strip(),
                     sku=sku,
-                    stock_quantity=int(row.get('stock_quantity', 0)),
+                    stock_quantity=stock_quantity,
                     is_active=row.get('is_active', 'true').lower() == 'true',
                     image_url=row.get('image_url', '').strip(),
-                    minimum_order_value=float(row.get('minimum_order_value', 0)) if row.get('minimum_order_value') else None,
+                    minimum_order_value=minimum_order_value,
                     created_by=admin_user.id,
                     created_at=datetime.datetime.utcnow(),
                     updated_at=datetime.datetime.utcnow()
@@ -324,13 +350,25 @@ def bulk_upload_products():
 
                 db.session.add(product)
                 success_count += 1
+                print(f"Added product: {product.name} with SKU: {product.sku}")
 
             except (ValueError, TypeError) as e:
                 errors.append(f'Row {row_num}: Invalid data format - {str(e)}')
                 error_count += 1
                 continue
+            except Exception as e:
+                errors.append(f'Row {row_num}: Unexpected error - {str(e)}')
+                error_count += 1
+                continue
 
-        db.session.commit()
+        try:
+            db.session.commit()
+            print(f"Successfully committed {success_count} products to database")
+        except Exception as e:
+            db.session.rollback()
+            errors.append(f'Database commit failed: {str(e)}')
+            error_count += success_count
+            success_count = 0
 
         return jsonify({
             'message': 'Bulk upload completed',
