@@ -258,13 +258,14 @@ export const adminAPI = {
     return response.data;
   },
 
-  getProducts: async (page = 1, perPage = 10, category = 'all', status = 'all') => {
+  getProducts: async (page = 1, perPage = 10, category = 'all', status = 'all', search = '') => {
     const params = new URLSearchParams({
       page: page.toString(),
       per_page: perPage.toString()
     });
     if (category && category !== 'all') params.append('category', category);
     if (status && status !== 'all') params.append('status', status);
+    if (search) params.append('search', search);
 
     const response = await api.get(`/api/admin/products?${params}`);
     return response.data;

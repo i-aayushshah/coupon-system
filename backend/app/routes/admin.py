@@ -141,11 +141,25 @@ def list_products():
     per_page = request.args.get('per_page', 10, type=int)
     category = request.args.get('category', '').strip()
     status = request.args.get('status', 'all')  # all, active, inactive
+    search = request.args.get('search', '').strip()
 
     query = Product.query
 
+    # Apply search filter
+    if search:
+        search_term = f'%{search}%'
+        query = query.filter(
+            db.or_(
+                Product.name.ilike(search_term),
+                Product.description.ilike(search_term),
+                Product.sku.ilike(search_term),
+                Product.brand.ilike(search_term),
+                Product.category.ilike(search_term)
+            )
+        )
+
     # Apply filters
-    if category:
+    if category and category != 'all':
         query = query.filter(Product.category.ilike(f'%{category}%'))
 
     if status == 'active':

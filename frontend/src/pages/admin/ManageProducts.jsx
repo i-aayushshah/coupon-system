@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../utils/api';
 import { Input, Button, Card, LoadingSpinner } from '../../components/FormComponents';
@@ -20,12 +20,12 @@ const ManageProducts = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-  }, [currentPage, categoryFilter, statusFilter]);
+  }, [currentPage, categoryFilter, statusFilter, searchQuery]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await adminAPI.getProducts(currentPage, 10, categoryFilter, statusFilter);
+      const response = await adminAPI.getProducts(currentPage, 10, categoryFilter, statusFilter, searchQuery);
       setProducts(response.products || []);
       setTotalPages(response.pagination?.pages || 1);
     } catch (error) {
@@ -47,8 +47,27 @@ const ManageProducts = () => {
 
   const handleSearch = () => {
     setCurrentPage(1);
-    fetchProducts();
+    // fetchProducts will be called automatically by useEffect when searchQuery changes
   };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setCategoryFilter('all');
+    setStatusFilter('all');
+    setCurrentPage(1);
+    // fetchProducts will be called automatically by useEffect
+  };
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchQuery !== '') {
+        setCurrentPage(1);
+      }
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const handleBulkAction = async () => {
     if (!bulkAction || selectedProducts.length === 0) {
@@ -148,15 +167,23 @@ const ManageProducts = () => {
 
       {/* Filters and Search */}
       <Card className="mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <Input
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
+            <div className="flex">
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-r-none"
+              />
+              <Button
+                onClick={() => setCurrentPage(1)}
+                className="rounded-l-none px-4"
+              >
+                Search
+              </Button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
@@ -203,6 +230,15 @@ const ManageProducts = () => {
               className="w-full"
             >
               Apply
+            </Button>
+          </div>
+          <div className="flex items-end">
+            <Button
+              variant="outline"
+              onClick={handleClearFilters}
+              className="w-full"
+            >
+              Clear Filters
             </Button>
           </div>
         </div>
