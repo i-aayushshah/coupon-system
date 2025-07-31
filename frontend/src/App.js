@@ -27,6 +27,7 @@ import Users from './pages/admin/Users';
 import ManageProducts from './pages/admin/ManageProducts';
 import ProductForm from './pages/admin/ProductForm';
 import ImportProducts from './pages/admin/ImportProducts';
+import Activities from './pages/admin/Activities';
 import CouponView from './pages/admin/CouponView';
 
 function App() {
@@ -207,6 +208,14 @@ function App() {
               element={
                 <AdminRoute>
                   <ImportProducts />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/activities"
+              element={
+                <AdminRoute>
+                  <Activities />
                 </AdminRoute>
               }
             />

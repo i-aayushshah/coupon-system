@@ -193,8 +193,14 @@ export const adminAPI = {
     return response.data;
   },
 
-  getRecentActivities: async () => {
-    const response = await api.get('/api/admin/activities');
+  getRecentActivities: async (page = 1, perPage = 10, filter = 'all', search = '') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    if (filter && filter !== 'all') params.append('filter', filter);
+    if (search) params.append('search', search);
+    const response = await api.get(`/api/admin/activities?${params}`);
     return response.data;
   },
 

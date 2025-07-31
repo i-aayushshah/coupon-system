@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../utils/api';
 import { Card, LoadingSpinner } from '../../components/FormComponents';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [recentActivities, setRecentActivities] = useState([]);
@@ -15,10 +17,10 @@ const AdminDashboard = () => {
       try {
         const [dashboardData, activitiesData] = await Promise.all([
           adminAPI.getDashboard(),
-          adminAPI.getRecentActivities()
+          adminAPI.getRecentActivities(1, 5) // Show only 5 recent activities on dashboard
         ]);
 
-        setStats(dashboardData);
+        setStats(dashboardData.stats);
         setRecentActivities(activitiesData.activities || []);
       } catch (error) {
         console.error('Error fetching admin dashboard data:', error);
@@ -175,7 +177,10 @@ const AdminDashboard = () => {
         <Card>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Recent Activities</h2>
-            <button className="text-sm text-blue-600 hover:text-blue-800">
+            <button
+              onClick={() => navigate('/admin/activities')}
+              className="text-sm text-blue-600 hover:text-blue-800"
+            >
               View All
             </button>
           </div>
@@ -195,7 +200,7 @@ const AdminDashboard = () => {
                       {activity.description}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
-                      {formatDate(activity.created_at)}
+                      {formatDate(activity.timestamp)}
                     </p>
                   </div>
                 </div>

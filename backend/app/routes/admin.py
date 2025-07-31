@@ -728,12 +728,24 @@ def get_coupon_redemptions(coupon_id):
 @jwt_required()
 @admin_required
 def admin_dashboard():
+    # Total users
+    total_users = User.query.count()
+
     # Total coupons
     total_coupons = Coupon.query.count()
 
-    # Active vs inactive coupons
-    active_coupons = Coupon.query.filter_by(is_active=True).count()
-    inactive_coupons = Coupon.query.filter_by(is_active=False).count()
+    # Active vs inactive coupons (excluding expired ones)
+    current_time = datetime.datetime.utcnow()
+    active_coupons = Coupon.query.filter(
+        Coupon.is_active == True,
+        Coupon.end_date > current_time
+    ).count()
+    inactive_coupons = Coupon.query.filter(
+        db.or_(
+            Coupon.is_active == False,
+            Coupon.end_date <= current_time
+        )
+    ).count()
 
     # Public vs private coupons
     public_coupons = Coupon.query.filter_by(is_public=True).count()
@@ -834,6 +846,7 @@ def admin_dashboard():
 
     return jsonify({
         'stats': {
+            'total_users': total_users,
             'total_coupons': total_coupons,
             'active_coupons': active_coupons,
             'inactive_coupons': inactive_coupons,
@@ -1066,21 +1079,24 @@ def get_categories():
         'categories': category_list
     }), 200
 
-# GET /api/admin/activities - Recent activities for admin dashboard
+# GET /api/admin/activities - All activities with pagination and filtering
 @bp.route('/activities', methods=['GET'])
 @jwt_required()
 @admin_required
 def get_recent_activities():
-    # Get recent activities from different sources
+    # Get pagination and filter parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    filter_type = request.args.get('filter', 'all')
+    search_query = request.args.get('search', '').strip()
+
+    # Get all activities from different sources
     activities = []
 
-    # Recent user registrations (last 7 days)
-    week_ago = datetime.datetime.utcnow() - datetime.timedelta(days=7)
-    recent_users = User.query.filter(
-        User.created_at >= week_ago
-    ).order_by(User.created_at.desc()).limit(5).all()
+    # All user registrations (not just recent)
+    all_users = User.query.order_by(User.created_at.desc()).all()
 
-    for user in recent_users:
+    for user in all_users:
         activities.append({
             'id': f'user_{user.id}',
             'type': 'user_registered',
@@ -1094,12 +1110,10 @@ def get_recent_activities():
             }
         })
 
-    # Recent coupon creations (last 7 days)
-    recent_coupons = Coupon.query.filter(
-        Coupon.created_at >= week_ago
-    ).order_by(Coupon.created_at.desc()).limit(5).all()
+    # All coupon creations (not just recent)
+    all_coupons = Coupon.query.order_by(Coupon.created_at.desc()).all()
 
-    for coupon in recent_coupons:
+    for coupon in all_coupons:
         activities.append({
             'id': f'coupon_{coupon.id}',
             'type': 'coupon_created',
@@ -1113,18 +1127,16 @@ def get_recent_activities():
             }
         })
 
-    # Recent redemptions (last 7 days)
-    recent_redemptions = db.session.query(
+    # All redemptions (not just recent)
+    all_redemptions = db.session.query(
         Redemption, User, Coupon
     ).join(
         User, Redemption.user_id == User.id
     ).join(
         Coupon, Redemption.coupon_id == Coupon.id
-    ).filter(
-        Redemption.redeemed_at >= week_ago
-    ).order_by(Redemption.redeemed_at.desc()).limit(5).all()
+    ).order_by(Redemption.redeemed_at.desc()).all()
 
-    for redemption, user, coupon in recent_redemptions:
+    for redemption, user, coupon in all_redemptions:
         activities.append({
             'id': f'redemption_{redemption.id}',
             'type': 'coupon_redeemed',
@@ -1144,12 +1156,10 @@ def get_recent_activities():
             'discount_applied': redemption.discount_applied
         })
 
-    # Recent orders (last 7 days)
-    recent_orders = Order.query.filter(
-        Order.created_at >= week_ago
-    ).order_by(Order.created_at.desc()).limit(5).all()
+    # All orders (not just recent)
+    all_orders = Order.query.order_by(Order.created_at.desc()).all()
 
-    for order in recent_orders:
+    for order in all_orders:
         activities.append({
             'id': f'order_{order.id}',
             'type': 'order_placed',
@@ -1163,12 +1173,51 @@ def get_recent_activities():
             }
         })
 
+    # All product creations (not just recent)
+    all_products = Product.query.order_by(Product.created_at.desc()).all()
+
+    for product in all_products:
+        activities.append({
+            'id': f'product_{product.id}',
+            'type': 'product_created',
+            'title': 'New Product Created',
+            'description': f'Product "{product.name}" ({product.sku}) was added',
+            'timestamp': product.created_at.isoformat(),
+            'product': {
+                'id': product.id,
+                'name': product.name,
+                'sku': product.sku,
+                'price': float(product.price)
+            }
+        })
+
     # Sort all activities by timestamp (most recent first)
     activities.sort(key=lambda x: x['timestamp'], reverse=True)
 
-    # Return only the most recent 10 activities
+    # Apply filtering
+    if filter_type != 'all':
+        activities = [activity for activity in activities if activity['type'] == filter_type]
+
+    if search_query:
+        search_lower = search_query.lower()
+        activities = [activity for activity in activities if
+                    search_lower in activity['title'].lower() or
+                    search_lower in activity['description'].lower()]
+
+    # Apply pagination
+    total_activities = len(activities)
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+    paginated_activities = activities[start_index:end_index]
+
     return jsonify({
-        'activities': activities[:10]
+        'activities': paginated_activities,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': total_activities,
+            'pages': (total_activities + per_page - 1) // per_page
+        }
     }), 200
 
 # POST /api/admin/upload-image - Upload product image
