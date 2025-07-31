@@ -216,26 +216,65 @@ const Profile = () => {
             <Card>
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Change Password</h2>
 
-              {!showPasswordForm ? (
-                <div className="text-center py-8">
-                  <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                  <p className="text-gray-500 mb-4">Keep your account secure with a strong password</p>
-                  <Button onClick={() => setShowPasswordForm(true)}>
-                    Change Password
-                  </Button>
-                </div>
+                             {!showPasswordForm ? (
+                 <div className="text-center py-8">
+                   <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                   </svg>
+                   <p className="text-gray-500 mb-4">Keep your account secure with a strong password</p>
+                   <div className="space-y-3">
+                     <Button onClick={() => setShowPasswordForm(true)}>
+                       Change Password
+                     </Button>
+                     <div>
+                       <p className="text-sm text-gray-500 mb-2">Forgot your current password?</p>
+                       <Button
+                         variant="outline"
+                         size="sm"
+                         onClick={() => window.location.href = '/forgot-password'}
+                       >
+                         Reset Password via Email
+                       </Button>
+                     </div>
+                   </div>
+                 </div>
               ) : (
-                <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
-                  <Input
-                    label="Current Password"
-                    type="password"
-                    error={passwordErrors.currentPassword?.message}
-                    {...registerPassword('currentPassword', {
-                      required: 'Current password is required'
-                    })}
-                  />
+                                 <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-6">
+                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                     <div className="flex">
+                       <div className="flex-shrink-0">
+                         <svg className="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                         </svg>
+                       </div>
+                       <div className="ml-3">
+                         <h3 className="text-sm font-medium text-blue-800">Password Change Options</h3>
+                         <div className="mt-2 text-sm text-blue-700">
+                           <p>• <strong>Change Password:</strong> If you remember your current password</p>
+                           <p>• <strong>Reset Password:</strong> If you forgot your current password (requires email verification)</p>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                                     <div>
+                     <Input
+                       label="Current Password"
+                       type="password"
+                       error={passwordErrors.currentPassword?.message}
+                       {...registerPassword('currentPassword', {
+                         required: 'Current password is required'
+                       })}
+                     />
+                     <div className="mt-2 text-right">
+                       <button
+                         type="button"
+                         onClick={() => window.location.href = '/forgot-password'}
+                         className="text-sm text-blue-600 hover:text-blue-800 underline"
+                       >
+                         Forgot your current password?
+                       </button>
+                     </div>
+                   </div>
 
                   <Input
                     label="New Password"
