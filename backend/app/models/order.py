@@ -53,6 +53,8 @@ class OrderItem(db.Model):
     unit_price = db.Column(db.Numeric(10, 2), nullable=False)
     line_total = db.Column(db.Numeric(10, 2), nullable=False)
 
+
+
     def __repr__(self):
         return f'<OrderItem {self.id}>'
 

@@ -11,6 +11,11 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import Coupons from './pages/Coupons';
+import Products from './pages/Products';
+import RedemptionHistory from './pages/RedemptionHistory';
+import Cart from './pages/Cart';
 
 function App() {
   return (
@@ -56,6 +61,46 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/coupons"
+              element={
+                <ProtectedRoute>
+                  <Coupons />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/products"
+              element={
+                <ProtectedRoute>
+                  <Products />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/redemption-history"
+              element={
+                <ProtectedRoute>
+                  <RedemptionHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cart"
+              element={
+                <ProtectedRoute>
+                  <Cart />
                 </ProtectedRoute>
               }
             />

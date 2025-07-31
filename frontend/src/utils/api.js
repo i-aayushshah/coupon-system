@@ -164,8 +164,14 @@ export const couponAPI = {
   },
 
   // Search coupons
-  searchCoupons: async (query, discountType = '', sortBy = 'expiry', page = 1) => {
-    const response = await api.get(`/api/coupons/search?q=${query}&discount_type=${discountType}&sort_by=${sortBy}&page=${page}`);
+  searchCoupons: async (query = '', discountType = '', sortBy = 'expiry', page = 1) => {
+    // If no query is provided, use the public endpoint instead
+    if (!query.trim()) {
+      const response = await api.get(`/api/coupons/public?page=${page}&per_page=12`);
+      return response.data;
+    }
+    // If query is provided, use the search endpoint
+    const response = await api.get(`/api/coupons/search?q=${query}&discount_type=${discountType}&sort_by=${sortBy}&page=${page}&per_page=12`);
     return response.data;
   },
 
@@ -313,9 +319,25 @@ export const cartAPI = {
     return response.data;
   },
 
+  // Check if product is in cart
+  isProductInCart: async (productId) => {
+    try {
+      const response = await api.get('/api/cart');
+      const cart = response.data.cart;
+      return cart.items.some(item => item.product_id === parseInt(productId));
+    } catch (error) {
+      console.error('Error checking cart:', error);
+      return false;
+    }
+  },
+
   // Update cart
   updateCart: async (productId, quantity) => {
-    const response = await api.put('/api/cart/update', { product_id: productId, quantity });
+    const requestData = {
+      updates: [{ product_id: parseInt(productId), quantity: parseInt(quantity) }]
+    };
+    console.log('Sending cart update request:', requestData); // Debug log
+    const response = await api.put('/api/cart/update', requestData);
     return response.data;
   },
 
@@ -328,6 +350,12 @@ export const cartAPI = {
   // Apply coupon
   applyCoupon: async (couponCode) => {
     const response = await api.post('/api/cart/apply-coupon', { coupon_code: couponCode });
+    return response.data;
+  },
+
+  // Remove coupon
+  removeCoupon: async () => {
+    const response = await api.post('/api/cart/remove-coupon');
     return response.data;
   },
 

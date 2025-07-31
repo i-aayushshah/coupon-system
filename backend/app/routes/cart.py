@@ -27,8 +27,31 @@ def calculate_cart_totals(cart):
     """Calculate cart totals"""
     subtotal = sum(item['line_total'] for item in cart['items'])
     cart['subtotal'] = subtotal
-    cart['discount_amount'] = 0
-    cart['final_total'] = subtotal
+
+    # Preserve existing discount if coupon is applied
+    if cart.get('applied_coupon'):
+        # Recalculate discount based on new subtotal
+        coupon = Coupon.query.filter_by(code=cart['applied_coupon']['code']).first()
+        if coupon and coupon.is_active:
+            discount_amount = 0
+            if coupon.discount_type == 'percentage':
+                discount_amount = (subtotal * coupon.discount_value) / 100
+                # Apply maximum discount cap if set
+                if coupon.maximum_discount_amount:
+                    discount_amount = min(discount_amount, float(coupon.maximum_discount_amount))
+            elif coupon.discount_type == 'fixed':
+                discount_amount = min(coupon.discount_value, subtotal)
+
+            cart['discount_amount'] = round(discount_amount, 2)
+            cart['applied_coupon']['discount_amount'] = round(discount_amount, 2)
+        else:
+            # Coupon is no longer valid, remove it
+            cart['applied_coupon'] = None
+            cart['discount_amount'] = 0
+    else:
+        cart['discount_amount'] = 0
+
+    cart['final_total'] = subtotal - cart['discount_amount']
     return cart
 
 # POST /api/cart/add - Add product to cart
@@ -109,6 +132,8 @@ def update_cart():
     user_id = get_jwt_identity()
     data = request.get_json()
 
+    print(f"Update cart request data: {data}")  # Debug log
+
     updates = data.get('updates', [])  # List of {product_id, quantity}
 
     if not updates:
@@ -117,16 +142,23 @@ def update_cart():
     cart = get_user_cart(user_id)
 
     for update in updates:
-        product_id = update.get('product_id')
-        quantity = update.get('quantity', 0)
+        try:
+            product_id = int(update.get('product_id'))
+            quantity = int(update.get('quantity', 0))
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid product_id or quantity format'}), 400
+
+        print(f"Processing update: product_id={product_id}, quantity={quantity}")  # Debug log
 
         if quantity <= 0:
             # Remove item
             cart['items'] = [item for item in cart['items'] if item['product_id'] != product_id]
         else:
             # Update quantity
+            item_found = False
             for item in cart['items']:
                 if item['product_id'] == product_id:
+                    item_found = True
                     # Check stock
                     product = Product.query.get(product_id)
                     if not product or not product.is_active:
@@ -138,6 +170,9 @@ def update_cart():
                     item['quantity'] = quantity
                     item['line_total'] = float(product.price) * quantity
                     break
+
+            if not item_found:
+                return jsonify({'error': f'Product {product_id} not found in cart'}), 404
 
     # Recalculate totals
     cart = calculate_cart_totals(cart)
@@ -182,6 +217,10 @@ def apply_coupon():
     if not cart['items']:
         return jsonify({'error': 'Cart is empty'}), 400
 
+    # Check if coupon is already applied
+    if cart.get('applied_coupon') and cart['applied_coupon']['code'] == coupon_code.upper():
+        return jsonify({'error': 'This coupon is already applied to your cart'}), 400
+
     # Find coupon
     coupon = Coupon.query.filter_by(code=coupon_code.upper()).first()
     if not coupon:
@@ -200,6 +239,22 @@ def apply_coupon():
     # Check usage limits
     if coupon.current_uses >= coupon.max_uses:
         return jsonify({'error': 'Coupon usage limit reached'}), 400
+
+    # Check if user has already redeemed this coupon
+    existing_redemption = Redemption.query.filter_by(
+        user_id=int(user_id),
+        coupon_id=coupon.id
+    ).first()
+
+    if existing_redemption:
+        return jsonify({'error': 'You have already redeemed this coupon'}), 400
+
+    # Check if coupon is for first-time users only
+    if coupon.first_time_user_only:
+        # Check if user has any previous redemptions
+        user_redemptions = Redemption.query.filter_by(user_id=int(user_id)).count()
+        if user_redemptions > 0:
+            return jsonify({'error': 'This coupon is only for first-time users'}), 400
 
     # Check minimum order value
     if coupon.minimum_order_value and cart['subtotal'] < float(coupon.minimum_order_value):
@@ -250,6 +305,26 @@ def apply_coupon():
         'cart': cart
     }), 200
 
+# POST /api/cart/remove-coupon - Remove applied coupon
+@bp.route('/remove-coupon', methods=['POST'])
+@jwt_required()
+def remove_coupon():
+    user_id = get_jwt_identity()
+    cart = get_user_cart(user_id)
+
+    if not cart.get('applied_coupon'):
+        return jsonify({'error': 'No coupon applied to remove'}), 400
+
+    # Remove coupon
+    cart['applied_coupon'] = None
+    cart['discount_amount'] = 0
+    cart['final_total'] = cart['subtotal']
+
+    return jsonify({
+        'message': 'Coupon removed successfully',
+        'cart': cart
+    }), 200
+
 # POST /api/cart/checkout - Complete order with coupon
 @bp.route('/checkout', methods=['POST'])
 @jwt_required()
@@ -257,8 +332,14 @@ def checkout():
     user_id = get_jwt_identity()
     data = request.get_json()
 
-    shipping_address = data.get('shipping_address', '')
-    payment_method = data.get('payment_method', '')
+    shipping_address = data.get('shipping_address', {})
+    payment_method = data.get('payment_method', 'credit_card')
+
+    # Convert shipping address to string if it's an object
+    if isinstance(shipping_address, dict):
+        shipping_address = f"{shipping_address.get('street', '')}, {shipping_address.get('city', '')}, {shipping_address.get('state', '')} {shipping_address.get('zip_code', '')}, {shipping_address.get('country', '')}"
+    elif not shipping_address:
+        shipping_address = "Default Address"
 
     cart = get_user_cart(user_id)
 
@@ -329,6 +410,9 @@ def checkout():
 
         # Create redemption record if coupon was used
         if coupon:
+            # Convert product IDs to JSON string for storage
+            products_applied_to = json.dumps([item['product_id'] for item in cart['items']])
+
             redemption = Redemption(
                 user_id=int(user_id),
                 coupon_id=coupon.id,
@@ -338,7 +422,7 @@ def checkout():
                 original_amount=cart['subtotal'],
                 discount_amount=cart['discount_amount'],
                 final_amount=cart['final_total'],
-                products_applied_to=[item['product_id'] for item in cart['items']]
+                products_applied_to=products_applied_to
             )
 
             db.session.add(redemption)

@@ -71,7 +71,9 @@ def calculate_discount(coupon, order_amount):
 
 # GET /api/coupons/public - List all public active coupons
 @bp.route('/public', methods=['GET'])
+@jwt_required()
 def list_public_coupons():
+    user_id = get_jwt_identity()
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
@@ -83,7 +85,20 @@ def list_public_coupons():
         Coupon.start_date <= now,
         Coupon.end_date >= now,
         Coupon.current_uses < Coupon.max_uses
-    ).order_by(Coupon.end_date.asc())  # Show expiring soon first
+    )
+
+    # Exclude coupons that user has already redeemed
+    # First, get all coupon IDs that the user has redeemed
+    redeemed_coupon_ids = db.session.query(Redemption.coupon_id).filter(
+        Redemption.user_id == int(user_id)
+    ).subquery()
+
+    # Then filter out those coupons
+    query = query.filter(
+        ~Coupon.id.in_(redeemed_coupon_ids)
+    )
+
+    query = query.order_by(Coupon.end_date.asc())  # Show expiring soon first
 
     # Pagination
     pagination = query.paginate(
@@ -263,30 +278,37 @@ def redeem_coupon():
 @bp.route('/search', methods=['GET'])
 @jwt_required()
 def search_coupons():
+    user_id = get_jwt_identity()
     query = request.args.get('q', '').strip()
     discount_type = request.args.get('discount_type', '').strip()
     sort_by = request.args.get('sort_by', 'expiry')  # expiry, discount, name
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
-    if not query:
-        return jsonify({'error': 'Search query is required'}), 400
+    # Build query - exclude coupons that user has already redeemed
+    # First, get all coupon IDs that the user has redeemed
+    redeemed_coupon_ids = db.session.query(Redemption.coupon_id).filter(
+        Redemption.user_id == int(user_id)
+    ).subquery()
 
-    # Build query
+    # Then filter out those coupons
     db_query = Coupon.query.filter(
         Coupon.is_public == True,
         Coupon.is_active == True
+    ).filter(
+        ~Coupon.id.in_(redeemed_coupon_ids)
     )
 
-    # Search by code or title
-    search_term = f"%{query}%"
-    db_query = db_query.filter(
-        db.or_(
-            Coupon.code.ilike(search_term),
-            Coupon.title.ilike(search_term),
-            Coupon.description.ilike(search_term)
+    # If query is provided, add search filter
+    if query:
+        search_term = f"%{query}%"
+        db_query = db_query.filter(
+            db.or_(
+                Coupon.code.ilike(search_term),
+                Coupon.title.ilike(search_term),
+                Coupon.description.ilike(search_term)
+            )
         )
-    )
 
     # Filter by discount type
     if discount_type:
