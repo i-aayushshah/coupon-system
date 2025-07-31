@@ -1,10 +1,12 @@
 from flask import Blueprint, request, jsonify, current_app
 from app import db
-from app.models import User, Coupon, Redemption
+from app.models import User, Coupon, Redemption, Product, Order, OrderItem
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from functools import wraps
 import datetime
 import re
+import csv
+from io import StringIO
 
 bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -40,6 +42,272 @@ def is_valid_discount(discount_type, discount_value):
     elif discount_type == 'fixed':
         return discount_value > 0
     return False
+
+# Helper: validate product data
+def is_valid_product_data(data):
+    required_fields = ['name', 'price', 'category']
+    if not all(field in data for field in required_fields):
+        return False, 'Missing required fields'
+
+    if not data['name'].strip():
+        return False, 'Product name is required'
+
+    try:
+        price = float(data['price'])
+        if price <= 0:
+            return False, 'Price must be greater than 0'
+    except (ValueError, TypeError):
+        return False, 'Invalid price format'
+
+    if not data['category'].strip():
+        return False, 'Category is required'
+
+    return True, 'Valid'
+
+# POST /api/admin/products - Create new product
+@bp.route('/products', methods=['POST'])
+@jwt_required()
+@admin_required
+def create_product():
+    data = request.get_json()
+
+    # Validate data
+    is_valid, error_message = is_valid_product_data(data)
+    if not is_valid:
+        return jsonify({'error': error_message}), 400
+
+    # Check if SKU already exists
+    sku = data.get('sku', '').strip()
+    if sku and Product.query.filter_by(sku=sku).first():
+        return jsonify({'error': 'SKU already exists'}), 409
+
+    # Get admin user
+    user_id = get_jwt_identity()
+    admin_user = User.query.get(int(user_id))
+
+    product = Product(
+        name=data['name'].strip(),
+        description=data.get('description', '').strip(),
+        price=float(data['price']),
+        category=data['category'].strip(),
+        brand=data.get('brand', '').strip(),
+        sku=sku,
+        stock_quantity=data.get('stock_quantity', 0),
+        is_active=data.get('is_active', True),
+        image_url=data.get('image_url', '').strip(),
+        minimum_order_value=float(data.get('minimum_order_value', 0)),
+        created_by=admin_user.id,
+        created_at=datetime.datetime.utcnow(),
+        updated_at=datetime.datetime.utcnow()
+    )
+
+    db.session.add(product)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Product created successfully',
+        'product': product.to_dict()
+    }), 201
+
+# GET /api/admin/products - List all products with pagination
+@bp.route('/products', methods=['GET'])
+@jwt_required()
+@admin_required
+def list_products():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    category = request.args.get('category', '').strip()
+    status = request.args.get('status', 'all')  # all, active, inactive
+
+    query = Product.query
+
+    # Apply filters
+    if category:
+        query = query.filter(Product.category.ilike(f'%{category}%'))
+
+    if status == 'active':
+        query = query.filter(Product.is_active == True)
+    elif status == 'inactive':
+        query = query.filter(Product.is_active == False)
+
+    # Order by creation date
+    query = query.order_by(Product.created_at.desc())
+
+    # Pagination
+    pagination = query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    products = []
+    for product in pagination.items:
+        products.append(product.to_dict())
+
+    return jsonify({
+        'products': products,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'has_next': pagination.has_next,
+            'has_prev': pagination.has_prev
+        }
+    }), 200
+
+# GET /api/admin/products/<id> - Get specific product
+@bp.route('/products/<int:product_id>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_product(product_id):
+    product = Product.query.get_or_404(product_id)
+
+    return jsonify({
+        'product': product.to_dict()
+    }), 200
+
+# PUT /api/admin/products/<id> - Update product
+@bp.route('/products/<int:product_id>', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_product(product_id):
+    product = Product.query.get_or_404(product_id)
+    data = request.get_json()
+
+    # Fields that can be updated
+    updatable_fields = ['name', 'description', 'price', 'category', 'brand',
+                       'sku', 'stock_quantity', 'is_active', 'image_url',
+                       'minimum_order_value']
+
+    for field in updatable_fields:
+        if field in data:
+            if field == 'price':
+                try:
+                    setattr(product, field, float(data[field]))
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Invalid price format'}), 400
+            elif field == 'stock_quantity':
+                try:
+                    setattr(product, field, int(data[field]))
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Invalid stock quantity format'}), 400
+            elif field == 'minimum_order_value':
+                try:
+                    setattr(product, field, float(data[field]))
+                except (ValueError, TypeError):
+                    return jsonify({'error': 'Invalid minimum order value format'}), 400
+            else:
+                setattr(product, field, data[field])
+
+    # Check SKU uniqueness if updated
+    if 'sku' in data and data['sku']:
+        existing_product = Product.query.filter_by(sku=data['sku']).first()
+        if existing_product and existing_product.id != product_id:
+            return jsonify({'error': 'SKU already exists'}), 409
+
+    product.updated_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Product updated successfully',
+        'product': product.to_dict()
+    }), 200
+
+# DELETE /api/admin/products/<id> - Delete product
+@bp.route('/products/<int:product_id>', methods=['DELETE'])
+@jwt_required()
+@admin_required
+def delete_product(product_id):
+    product = Product.query.get_or_404(product_id)
+
+    # Check if product has been ordered
+    if product.order_items.count() > 0:
+        return jsonify({'error': 'Cannot delete product that has been ordered'}), 400
+
+    db.session.delete(product)
+    db.session.commit()
+
+    return jsonify({'message': 'Product deleted successfully'}), 200
+
+# POST /api/admin/products/bulk-upload - CSV bulk upload
+@bp.route('/products/bulk-upload', methods=['POST'])
+@jwt_required()
+@admin_required
+def bulk_upload_products():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    if not file.filename.endswith('.csv'):
+        return jsonify({'error': 'File must be a CSV'}), 400
+
+    try:
+        # Read CSV file
+        csv_data = file.read().decode('utf-8')
+        csv_reader = csv.DictReader(StringIO(csv_data))
+
+        # Get admin user
+        user_id = get_jwt_identity()
+        admin_user = User.query.get(int(user_id))
+
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for row_num, row in enumerate(csv_reader, start=2):  # Start from 2 (header is row 1)
+            try:
+                # Validate required fields
+                if not row.get('name') or not row.get('price') or not row.get('category'):
+                    errors.append(f'Row {row_num}: Missing required fields')
+                    error_count += 1
+                    continue
+
+                # Check SKU uniqueness
+                sku = row.get('sku', '').strip()
+                if sku and Product.query.filter_by(sku=sku).first():
+                    errors.append(f'Row {row_num}: SKU already exists')
+                    error_count += 1
+                    continue
+
+                # Create product
+                product = Product(
+                    name=row['name'].strip(),
+                    description=row.get('description', '').strip(),
+                    price=float(row['price']),
+                    category=row['category'].strip(),
+                    brand=row.get('brand', '').strip(),
+                    sku=sku,
+                    stock_quantity=int(row.get('stock_quantity', 0)),
+                    is_active=row.get('is_active', 'true').lower() == 'true',
+                    image_url=row.get('image_url', '').strip(),
+                    minimum_order_value=float(row.get('minimum_order_value', 0)),
+                    created_by=admin_user.id,
+                    created_at=datetime.datetime.utcnow(),
+                    updated_at=datetime.datetime.utcnow()
+                )
+
+                db.session.add(product)
+                success_count += 1
+
+            except (ValueError, TypeError) as e:
+                errors.append(f'Row {row_num}: Invalid data format - {str(e)}')
+                error_count += 1
+                continue
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Bulk upload completed',
+            'success_count': success_count,
+            'error_count': error_count,
+            'errors': errors
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to process CSV file: {str(e)}'}), 500
 
 # POST /api/admin/coupons - Create new coupon
 @bp.route('/coupons', methods=['POST'])
@@ -83,6 +351,12 @@ def create_coupon():
     user_id = get_jwt_identity()
     admin_user = User.query.get(int(user_id))
 
+    # Enhanced coupon fields
+    minimum_order_value = data.get('minimum_order_value', 0)
+    applicable_categories = data.get('applicable_categories', [])
+    maximum_discount_amount = data.get('maximum_discount_amount')
+    first_time_user_only = data.get('first_time_user_only', False)
+
     coupon = Coupon(
         code=code,
         title=title,
@@ -96,30 +370,22 @@ def create_coupon():
         end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d'),
         created_by=admin_user.id,
         is_active=True,
+        minimum_order_value=minimum_order_value,
+        maximum_discount_amount=maximum_discount_amount,
+        first_time_user_only=first_time_user_only,
         created_at=datetime.datetime.utcnow(),
         updated_at=datetime.datetime.utcnow()
     )
+
+    # Set applicable categories
+    coupon.set_applicable_categories(applicable_categories)
 
     db.session.add(coupon)
     db.session.commit()
 
     return jsonify({
         'message': 'Coupon created successfully',
-        'coupon': {
-            'id': coupon.id,
-            'code': coupon.code,
-            'title': coupon.title,
-            'description': coupon.description,
-            'discount_type': coupon.discount_type,
-            'discount_value': coupon.discount_value,
-            'is_public': coupon.is_public,
-            'max_uses': coupon.max_uses,
-            'current_uses': coupon.current_uses,
-            'start_date': coupon.start_date.strftime('%Y-%m-%d'),
-            'end_date': coupon.end_date.strftime('%Y-%m-%d'),
-            'is_active': coupon.is_active,
-            'created_at': coupon.created_at.isoformat()
-        }
+        'coupon': coupon.to_dict()
     }), 201
 
 # GET /api/admin/coupons - List all coupons with pagination
@@ -162,7 +428,12 @@ def list_coupons():
             'start_date': coupon.start_date.strftime('%Y-%m-%d'),
             'end_date': coupon.end_date.strftime('%Y-%m-%d'),
             'is_active': coupon.is_active,
-            'created_at': coupon.created_at.isoformat()
+            'created_at': coupon.created_at.isoformat(),
+            # Enhanced fields for product integration
+            'minimum_order_value': float(coupon.minimum_order_value) if coupon.minimum_order_value else 0,
+            'applicable_categories': coupon.get_applicable_categories(),
+            'maximum_discount_amount': float(coupon.maximum_discount_amount) if coupon.maximum_discount_amount else None,
+            'first_time_user_only': coupon.first_time_user_only
         })
 
     return jsonify({
@@ -200,6 +471,11 @@ def get_coupon(coupon_id):
             'is_active': coupon.is_active,
             'created_at': coupon.created_at.isoformat(),
             'updated_at': coupon.updated_at.isoformat(),
+            # Enhanced fields for product integration
+            'minimum_order_value': float(coupon.minimum_order_value) if coupon.minimum_order_value else 0,
+            'applicable_categories': coupon.get_applicable_categories(),
+            'maximum_discount_amount': float(coupon.maximum_discount_amount) if coupon.maximum_discount_amount else None,
+            'first_time_user_only': coupon.first_time_user_only,
             'creator': {
                 'id': coupon.creator.id,
                 'username': coupon.creator.username,
@@ -218,7 +494,9 @@ def update_coupon(coupon_id):
 
     # Fields that can be updated
     updatable_fields = ['title', 'description', 'discount_value', 'is_public',
-                       'max_uses', 'start_date', 'end_date', 'is_active']
+                       'max_uses', 'start_date', 'end_date', 'is_active',
+                       'minimum_order_value', 'applicable_categories',
+                       'maximum_discount_amount', 'first_time_user_only']
 
     for field in updatable_fields:
         if field in data:
@@ -228,6 +506,26 @@ def update_coupon(coupon_id):
                     setattr(coupon, field, date_value)
                 except ValueError:
                     return jsonify({'error': f'Invalid {field} format'}), 400
+            elif field == 'applicable_categories':
+                # Handle JSON field for categories
+                if isinstance(data[field], list):
+                    coupon.set_applicable_categories(data[field])
+                else:
+                    return jsonify({'error': 'applicable_categories must be a list'}), 400
+            elif field in ['minimum_order_value', 'maximum_discount_amount']:
+                # Handle decimal fields
+                try:
+                    decimal_value = float(data[field]) if data[field] is not None else None
+                    if decimal_value is not None and decimal_value < 0:
+                        return jsonify({'error': f'{field} cannot be negative'}), 400
+                    setattr(coupon, field, decimal_value)
+                except (ValueError, TypeError):
+                    return jsonify({'error': f'Invalid {field} format'}), 400
+            elif field == 'first_time_user_only':
+                # Handle boolean field
+                if not isinstance(data[field], bool):
+                    return jsonify({'error': 'first_time_user_only must be a boolean'}), 400
+                setattr(coupon, field, data[field])
             else:
                 setattr(coupon, field, data[field])
 
@@ -262,7 +560,12 @@ def update_coupon(coupon_id):
             'start_date': coupon.start_date.strftime('%Y-%m-%d'),
             'end_date': coupon.end_date.strftime('%Y-%m-%d'),
             'is_active': coupon.is_active,
-            'updated_at': coupon.updated_at.isoformat()
+            'updated_at': coupon.updated_at.isoformat(),
+            # Enhanced fields for product integration
+            'minimum_order_value': float(coupon.minimum_order_value) if coupon.minimum_order_value else 0,
+            'applicable_categories': coupon.get_applicable_categories(),
+            'maximum_discount_amount': float(coupon.maximum_discount_amount) if coupon.maximum_discount_amount else None,
+            'first_time_user_only': coupon.first_time_user_only
         }
     }), 200
 
@@ -291,27 +594,49 @@ def get_coupon_redemptions(coupon_id):
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
-    query = Redemption.query.filter_by(coupon_id=coupon_id)
-    query = query.order_by(Redemption.redeemed_at.desc())
+    query = db.session.query(Redemption, User, Order).join(
+        User, Redemption.user_id == User.id
+    ).outerjoin(
+        Order, Redemption.order_id == Order.id
+    ).filter(
+        Redemption.coupon_id == coupon_id
+    ).order_by(Redemption.redeemed_at.desc())
 
     pagination = query.paginate(
         page=page, per_page=per_page, error_out=False
     )
 
     redemptions = []
-    for redemption in pagination.items:
-        redemptions.append({
+    for redemption, user, order in pagination.items:
+        redemption_data = {
             'id': redemption.id,
             'user': {
-                'id': redemption.user.id,
-                'username': redemption.user.username,
-                'email': redemption.user.email,
-                'first_name': redemption.user.first_name,
-                'last_name': redemption.user.last_name
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name
             },
             'discount_applied': redemption.discount_applied,
             'redeemed_at': redemption.redeemed_at.isoformat()
-        })
+        }
+
+        if order:
+            redemption_data['order'] = {
+                'id': order.id,
+                'order_status': order.order_status,
+                'subtotal': float(order.subtotal),
+                'final_total': float(order.final_total),
+                'created_at': order.created_at.isoformat()
+            }
+
+            # Add product information if available
+            if redemption.original_amount and redemption.final_amount:
+                redemption_data['order']['original_amount'] = float(redemption.original_amount)
+                redemption_data['order']['final_amount'] = float(redemption.final_amount)
+                redemption_data['order']['products_applied_to'] = redemption.get_products_applied_to()
+
+        redemptions.append(redemption_data)
 
     return jsonify({
         'coupon': {
@@ -348,6 +673,16 @@ def admin_dashboard():
     public_coupons = Coupon.query.filter_by(is_public=True).count()
     private_coupons = Coupon.query.filter_by(is_public=False).count()
 
+    # Product statistics
+    total_products = Product.query.count()
+    active_products = Product.query.filter_by(is_active=True).count()
+    low_stock_products = Product.query.filter(Product.stock_quantity < 10).count()
+
+    # Order statistics
+    total_orders = Order.query.count()
+    completed_orders = Order.query.filter_by(order_status='completed').count()
+    total_revenue = db.session.query(db.func.sum(Order.final_total)).scalar() or 0
+
     # Most redeemed coupons (top 5)
     most_redeemed = db.session.query(
         Coupon, db.func.count(Redemption.id).label('redemption_count')
@@ -366,18 +701,20 @@ def admin_dashboard():
 
     # Recent redemptions (last 10) - Fixed with explicit joins
     recent_redemptions = db.session.query(
-        Redemption, User, Coupon
+        Redemption, User, Coupon, Order
     ).select_from(Redemption).join(
         User, Redemption.user_id == User.id
     ).join(
         Coupon, Redemption.coupon_id == Coupon.id
+    ).outerjoin(
+        Order, Redemption.order_id == Order.id
     ).order_by(
         Redemption.redeemed_at.desc()
     ).limit(10).all()
 
     recent_redemptions_list = []
-    for redemption, user, coupon in recent_redemptions:
-        recent_redemptions_list.append({
+    for redemption, user, coupon, order in recent_redemptions:
+        redemption_data = {
             'id': redemption.id,
             'user': {
                 'username': user.username,
@@ -389,7 +726,16 @@ def admin_dashboard():
             },
             'discount_applied': redemption.discount_applied,
             'redeemed_at': redemption.redeemed_at.isoformat()
-        })
+        }
+
+        if order:
+            redemption_data['order'] = {
+                'id': order.id,
+                'order_status': order.order_status,
+                'final_total': float(order.final_total)
+            }
+
+        recent_redemptions_list.append(redemption_data)
 
     # Total redemptions
     total_redemptions = Redemption.query.count()
@@ -399,6 +745,27 @@ def admin_dashboard():
         Coupon.end_date < datetime.datetime.utcnow()
     ).count()
 
+    # Top selling products
+    top_products = db.session.query(
+        Product, db.func.sum(OrderItem.quantity).label('total_sold')
+    ).join(
+        OrderItem, Product.id == OrderItem.product_id
+    ).group_by(
+        Product.id
+    ).order_by(
+        db.func.sum(OrderItem.quantity).desc()
+    ).limit(5).all()
+
+    top_products_list = []
+    for product, total_sold in top_products:
+        top_products_list.append({
+            'id': product.id,
+            'name': product.name,
+            'category': product.category,
+            'total_sold': total_sold,
+            'current_stock': product.stock_quantity
+        })
+
     return jsonify({
         'stats': {
             'total_coupons': total_coupons,
@@ -407,8 +774,15 @@ def admin_dashboard():
             'public_coupons': public_coupons,
             'private_coupons': private_coupons,
             'total_redemptions': total_redemptions,
-            'expired_coupons': expired_coupons
+            'expired_coupons': expired_coupons,
+            'total_products': total_products,
+            'active_products': active_products,
+            'low_stock_products': low_stock_products,
+            'total_orders': total_orders,
+            'completed_orders': completed_orders,
+            'total_revenue': round(float(total_revenue), 2)
         },
         'most_redeemed_coupons': most_redeemed_list,
-        'recent_redemptions': recent_redemptions_list
+        'recent_redemptions': recent_redemptions_list,
+        'top_selling_products': top_products_list
     }), 200

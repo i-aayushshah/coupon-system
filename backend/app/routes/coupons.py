@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from app import db
-from app.models import User, Coupon, Redemption
+from app.models import User, Coupon, Redemption, Order
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import datetime
 import re
@@ -8,7 +8,7 @@ import re
 bp = Blueprint('coupons', __name__, url_prefix='/api/coupons')
 
 # Helper: validate coupon for redemption
-def validate_coupon_for_redemption(coupon, user_id):
+def validate_coupon_for_redemption(coupon, user_id, order_amount=0):
     """Validate if a coupon can be redeemed by a user"""
     errors = []
 
@@ -39,6 +39,20 @@ def validate_coupon_for_redemption(coupon, user_id):
     if existing_redemption:
         errors.append("You have already redeemed this coupon")
 
+    # Enhanced validation for product integration
+    if order_amount > 0:
+        # Check minimum order value
+        if coupon.minimum_order_value and order_amount < float(coupon.minimum_order_value):
+            errors.append(f"Minimum order value of ${coupon.minimum_order_value} required")
+
+        # Check first-time user restriction
+        if coupon.first_time_user_only:
+            user = User.query.get(user_id)
+            if user:
+                existing_redemptions = Redemption.query.filter_by(user_id=user_id).count()
+                if existing_redemptions > 0:
+                    errors.append("This coupon is only for first-time users")
+
     return len(errors) == 0, errors
 
 # Helper: calculate discount amount
@@ -46,6 +60,9 @@ def calculate_discount(coupon, order_amount):
     """Calculate the discount amount based on coupon type and order amount"""
     if coupon.discount_type == 'percentage':
         discount_amount = (order_amount * coupon.discount_value) / 100
+        # Apply maximum discount cap if set
+        if coupon.maximum_discount_amount:
+            discount_amount = min(discount_amount, float(coupon.maximum_discount_amount))
         return round(discount_amount, 2)
     elif coupon.discount_type == 'fixed':
         # For fixed discount, don't exceed order amount
@@ -87,7 +104,12 @@ def list_public_coupons():
             'remaining_uses': coupon.max_uses - coupon.current_uses,
             'start_date': coupon.start_date.strftime('%Y-%m-%d'),
             'end_date': coupon.end_date.strftime('%Y-%m-%d'),
-            'days_remaining': (coupon.end_date - now).days
+            'days_remaining': (coupon.end_date - now).days,
+            # Enhanced fields for product integration
+            'minimum_order_value': float(coupon.minimum_order_value) if coupon.minimum_order_value else 0,
+            'applicable_categories': coupon.get_applicable_categories(),
+            'maximum_discount_amount': float(coupon.maximum_discount_amount) if coupon.maximum_discount_amount else None,
+            'first_time_user_only': coupon.first_time_user_only
         })
 
     return jsonify({
@@ -154,7 +176,12 @@ def validate_coupon(code):
             'remaining_uses': coupon.max_uses - coupon.current_uses,
             'start_date': coupon.start_date.strftime('%Y-%m-%d'),
             'end_date': coupon.end_date.strftime('%Y-%m-%d'),
-            'days_remaining': (coupon.end_date - now).days
+            'days_remaining': (coupon.end_date - now).days,
+            # Enhanced fields for product integration
+            'minimum_order_value': float(coupon.minimum_order_value) if coupon.minimum_order_value else 0,
+            'applicable_categories': coupon.get_applicable_categories(),
+            'maximum_discount_amount': float(coupon.maximum_discount_amount) if coupon.maximum_discount_amount else None,
+            'first_time_user_only': coupon.first_time_user_only
         },
         'errors': errors
     }), 200
@@ -185,7 +212,7 @@ def redeem_coupon():
         return jsonify({'error': 'Coupon not found'}), 404
 
     # Validate coupon for redemption
-    is_valid, errors = validate_coupon_for_redemption(coupon, int(user_id))
+    is_valid, errors = validate_coupon_for_redemption(coupon, int(user_id), order_amount)
     if not is_valid:
         return jsonify({
             'error': 'Coupon cannot be redeemed',
@@ -296,7 +323,12 @@ def search_coupons():
             'start_date': coupon.start_date.strftime('%Y-%m-%d'),
             'end_date': coupon.end_date.strftime('%Y-%m-%d'),
             'days_remaining': (coupon.end_date - now).days,
-            'is_expired': coupon.end_date < now
+            'is_expired': coupon.end_date < now,
+            # Enhanced fields for product integration
+            'minimum_order_value': float(coupon.minimum_order_value) if coupon.minimum_order_value else 0,
+            'applicable_categories': coupon.get_applicable_categories(),
+            'maximum_discount_amount': float(coupon.maximum_discount_amount) if coupon.maximum_discount_amount else None,
+            'first_time_user_only': coupon.first_time_user_only
         })
 
     return jsonify({
@@ -320,11 +352,13 @@ def get_user_redemptions():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
-    # Get user's redemptions with coupon details
+    # Get user's redemptions with coupon details and order info
     query = db.session.query(
-        Redemption, Coupon
+        Redemption, Coupon, Order
     ).join(
         Coupon, Redemption.coupon_id == Coupon.id
+    ).outerjoin(
+        Order, Redemption.order_id == Order.id
     ).filter(
         Redemption.user_id == int(user_id)
     ).order_by(
@@ -339,9 +373,9 @@ def get_user_redemptions():
     redemptions = []
     total_saved = 0
 
-    for redemption, coupon in pagination.items:
+    for redemption, coupon, order in pagination.items:
         total_saved += redemption.discount_applied
-        redemptions.append({
+        redemption_data = {
             'id': redemption.id,
             'coupon': {
                 'id': coupon.id,
@@ -353,7 +387,25 @@ def get_user_redemptions():
             },
             'discount_applied': redemption.discount_applied,
             'redeemed_at': redemption.redeemed_at.isoformat()
-        })
+        }
+
+        # Add order information if available
+        if order:
+            redemption_data['order'] = {
+                'id': order.id,
+                'order_status': order.order_status,
+                'subtotal': float(order.subtotal),
+                'final_total': float(order.final_total),
+                'created_at': order.created_at.isoformat()
+            }
+
+            # Add product information if available
+            if redemption.original_amount and redemption.final_amount:
+                redemption_data['order']['original_amount'] = float(redemption.original_amount)
+                redemption_data['order']['final_amount'] = float(redemption.final_amount)
+                redemption_data['order']['products_applied_to'] = redemption.get_products_applied_to()
+
+        redemptions.append(redemption_data)
 
     return jsonify({
         'redemptions': redemptions,

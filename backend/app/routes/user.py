@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from app import db
-from app.models import User, Coupon, Redemption
+from app.models import User, Coupon, Redemption, Order, Product
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import datetime
 import re
@@ -193,21 +193,39 @@ def get_user_stats():
         Redemption.redeemed_at.desc()
     ).all()
 
+    # Get user's orders
+    orders = Order.query.filter_by(user_id=user.id).order_by(
+        Order.created_at.desc()
+    ).all()
+
     # Calculate total statistics
     total_redemptions = len(redemptions)
     total_savings = sum(r.discount_applied for r in redemptions)
+    total_orders = len(orders)
+    total_spent = sum(float(order.final_total) for order in orders)
 
-    # Get recent redemptions (last 5)
+    # Get recent redemptions (last 5) with order info
     recent_redemptions = []
     for redemption in redemptions[:5]:
         coupon = Coupon.query.get(redemption.coupon_id)
-        recent_redemptions.append({
+        order = Order.query.get(redemption.order_id) if redemption.order_id else None
+
+        redemption_data = {
             'id': redemption.id,
             'coupon_code': coupon.code if coupon else 'Unknown',
             'coupon_title': coupon.title if coupon else 'Unknown',
             'discount_applied': redemption.discount_applied,
             'redeemed_at': redemption.redeemed_at.isoformat()
-        })
+        }
+
+        if order:
+            redemption_data['order'] = {
+                'id': order.id,
+                'order_status': order.order_status,
+                'final_total': float(order.final_total)
+            }
+
+        recent_redemptions.append(redemption_data)
 
     # Get available public coupons count
     now = datetime.datetime.utcnow()
@@ -247,10 +265,23 @@ def get_user_stats():
 
     favorite_type = max(coupon_types.items(), key=lambda x: x[1]) if coupon_types else None
 
+    # Get favorite product categories (from orders)
+    category_spending = {}
+    for order in orders:
+        for item in order.items:
+            product = Product.query.get(item.product_id)
+            if product:
+                category = product.category
+                category_spending[category] = category_spending.get(category, 0) + float(item.line_total)
+
+    favorite_category = max(category_spending.items(), key=lambda x: x[1]) if category_spending else None
+
     return jsonify({
         'stats': {
             'total_redemptions': total_redemptions,
             'total_savings': round(total_savings, 2),
+            'total_orders': total_orders,
+            'total_spent': round(total_spent, 2),
             'available_coupons': available_coupons,
             'account_age_days': (datetime.datetime.utcnow() - user.created_at).days
         },
@@ -260,7 +291,12 @@ def get_user_stats():
             'type': favorite_type[0] if favorite_type else None,
             'count': favorite_type[1] if favorite_type else 0
         },
-        'coupon_type_breakdown': coupon_types
+        'favorite_product_category': {
+            'category': favorite_category[0] if favorite_category else None,
+            'spent': round(favorite_category[1], 2) if favorite_category else 0
+        },
+        'coupon_type_breakdown': coupon_types,
+        'category_spending': {k: round(v, 2) for k, v in category_spending.items()}
     }), 200
 
 # GET /api/user/dashboard - User dashboard data
@@ -273,11 +309,13 @@ def get_user_dashboard():
     if not user:
         return jsonify({'error': 'User not found'}), 404
 
-    # Get user's redemptions with coupon details
+    # Get user's redemptions with coupon details and order info
     redemptions_query = db.session.query(
-        Redemption, Coupon
+        Redemption, Coupon, Order
     ).join(
         Coupon, Redemption.coupon_id == Coupon.id
+    ).outerjoin(
+        Order, Redemption.order_id == Order.id
     ).filter(
         Redemption.user_id == user.id
     ).order_by(
@@ -289,6 +327,10 @@ def get_user_dashboard():
     # Calculate statistics
     total_redemptions = redemptions_query.count()
     total_savings = sum(r[0].discount_applied for r in redemptions)
+
+    # Get order statistics
+    total_orders = Order.query.filter_by(user_id=user.id).count()
+    total_spent = db.session.query(db.func.sum(Order.final_total)).filter_by(user_id=user.id).scalar() or 0
 
     # Get available public coupons
     now = datetime.datetime.utcnow()
@@ -315,14 +357,23 @@ def get_user_dashboard():
 
     # Format recent redemptions
     recent_redemptions_list = []
-    for redemption, coupon in redemptions:
-        recent_redemptions_list.append({
+    for redemption, coupon, order in redemptions:
+        redemption_data = {
             'id': redemption.id,
             'coupon_code': coupon.code,
             'coupon_title': coupon.title,
             'discount_applied': redemption.discount_applied,
             'redeemed_at': redemption.redeemed_at.isoformat()
-        })
+        }
+
+        if order:
+            redemption_data['order'] = {
+                'id': order.id,
+                'order_status': order.order_status,
+                'final_total': float(order.final_total)
+            }
+
+        recent_redemptions_list.append(redemption_data)
 
     return jsonify({
         'user': {
@@ -335,6 +386,8 @@ def get_user_dashboard():
         'overview': {
             'total_redemptions': total_redemptions,
             'total_savings': round(total_savings, 2),
+            'total_orders': total_orders,
+            'total_spent': round(float(total_spent), 2),
             'available_coupons_count': len(available_coupons_list)
         },
         'recent_redemptions': recent_redemptions_list,
