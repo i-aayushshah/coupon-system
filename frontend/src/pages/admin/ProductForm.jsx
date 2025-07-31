@@ -14,6 +14,7 @@ const ProductForm = () => {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState([]);
   const [imagePreview, setImagePreview] = useState('');
+  const [uploadedImageFile, setUploadedImageFile] = useState(null);
 
   const {
     register,
@@ -36,9 +37,22 @@ const ProductForm = () => {
   const fetchCategories = async () => {
     try {
       const response = await adminAPI.getCategories();
-      setCategories(response.categories || []);
+      // Add "All" and "Electronics" categories, remove duplicates
+      const existingCategories = response.categories || [];
+      const allCategories = ['All', 'Electronics'];
+
+      // Add other categories only if they're not already "Electronics"
+      existingCategories.forEach(category => {
+        if (category !== 'Electronics' && !allCategories.includes(category)) {
+          allCategories.push(category);
+        }
+      });
+
+      setCategories(allCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      // Fallback to default categories if API fails
+      setCategories(['All', 'Electronics']);
     }
   };
 
@@ -56,6 +70,9 @@ const ProductForm = () => {
       if (product.image_url) {
         setImagePreview(product.image_url);
       }
+
+      // Clear any uploaded file when editing
+      setUploadedImageFile(null);
     } catch (error) {
       console.error('Error fetching product:', error);
       toast.error('Failed to load product');
@@ -76,23 +93,92 @@ const ProductForm = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Store the file for upload
+      setUploadedImageFile(file);
+
+      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
+    } else {
+      // Clear image if no file selected
+      setUploadedImageFile(null);
+      setImagePreview('');
+    }
+  };
+
+  const clearImage = () => {
+    setUploadedImageFile(null);
+    setImagePreview('');
+    setValue('image_url', '');
+  };
+
+  const uploadImageToPublic = async (file) => {
+    try {
+      // Create a unique filename
+      const timestamp = Date.now();
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `product_${timestamp}.${fileExtension}`;
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('filename', fileName);
+
+      // Get the API base URL from the environment or use default
+      const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
+      // Get the auth token
+      const token = localStorage.getItem('token');
+
+      // Upload to backend endpoint that saves to public folder
+      const response = await fetch(`${apiBaseUrl}/api/admin/upload-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Upload failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.imageUrl; // This will be the path to the uploaded image
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
     }
   };
 
   const onSubmit = async (data) => {
     setSaving(true);
     try {
+      // Handle image upload if there's an uploaded file
+      let imageUrl = data.image_url;
+      if (uploadedImageFile) {
+        try {
+          imageUrl = await uploadImageToPublic(uploadedImageFile);
+          toast.success('Image uploaded successfully!');
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          toast.error('Failed to upload image. Product will be saved without image.');
+          // Keep the existing image URL if upload fails
+          imageUrl = data.image_url || '';
+        }
+      }
+
       // Prepare data
       const productData = {
         ...data,
+        image_url: imageUrl,
         price: parseFloat(data.price),
         stock_quantity: parseInt(data.stock_quantity),
-        minimum_order_value: data.minimum_order_value ? parseFloat(data.minimum_order_value) : null,
+        minimum_order_value: data.minimum_order_value && data.minimum_order_value.trim() !== '' ? parseFloat(data.minimum_order_value) : null,
         is_active: data.is_active || false
       };
 
@@ -121,7 +207,7 @@ const ProductForm = () => {
         is_active: false, // Draft status
         price: parseFloat(data.price) || 0,
         stock_quantity: parseInt(data.stock_quantity) || 0,
-        minimum_order_value: data.minimum_order_value ? parseFloat(data.minimum_order_value) : null,
+        minimum_order_value: data.minimum_order_value && data.minimum_order_value.trim() !== '' ? parseFloat(data.minimum_order_value) : null,
         is_active: false
       };
 
@@ -239,15 +325,17 @@ const ProductForm = () => {
                   <Select
                     label="Category"
                     error={errors.category?.message}
+                    options={[
+                      { value: '', label: 'Select Category' },
+                      ...categories.map(category => ({
+                        value: category,
+                        label: category
+                      }))
+                    ]}
                     {...register('category', {
                       required: 'Category is required'
                     })}
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
-                  </Select>
+                  />
                 </div>
 
                 <Textarea
@@ -296,11 +384,19 @@ const ProductForm = () => {
                     label="Minimum Order Value"
                     type="number"
                     step="0.01"
+                    placeholder="Optional"
                     error={errors.minimum_order_value?.message}
                     {...register('minimum_order_value', {
                       min: {
                         value: 0,
                         message: 'Minimum order value must be positive'
+                      },
+                      validate: (value) => {
+                        if (value === '' || value === null || value === undefined) {
+                          return true; // Allow empty values
+                        }
+                        const num = parseFloat(value);
+                        return !isNaN(num) || 'Please enter a valid number';
                       }
                     })}
                   />
@@ -317,12 +413,12 @@ const ProductForm = () => {
                     </label>
                     <Input
                       type="url"
-                      placeholder="https://example.com/image.jpg"
+                      placeholder="https://example.com/image.jpg or /uploads/image.jpg"
                       error={errors.image_url?.message}
                       {...register('image_url', {
                         pattern: {
-                          value: /^https?:\/\/.+/,
-                          message: 'Please enter a valid URL'
+                          value: /^(https?:\/\/.+|\/uploads\/.+)$/,
+                          message: 'Please enter a valid URL or upload path'
                         }
                       })}
                     />
@@ -342,9 +438,18 @@ const ProductForm = () => {
 
                   {imagePreview && (
                     <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Image Preview
-                      </label>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Image Preview
+                        </label>
+                        <button
+                          type="button"
+                          onClick={clearImage}
+                          className="text-sm text-red-600 hover:text-red-800"
+                        >
+                          Clear Image
+                        </button>
+                      </div>
                       <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden">
                         <img
                           src={imagePreview}

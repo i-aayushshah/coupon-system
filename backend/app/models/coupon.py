@@ -65,9 +65,9 @@ class Coupon(db.Model):
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,
             'is_active': self.is_active,
-            'minimum_order_value': float(self.minimum_order_value) if self.minimum_order_value else 0,
+            'minimum_order_value': float(self.minimum_order_value) if self.minimum_order_value is not None else 0.0,
             'applicable_categories': self.get_applicable_categories(),
-            'maximum_discount_amount': float(self.maximum_discount_amount) if self.maximum_discount_amount else None,
+            'maximum_discount_amount': float(self.maximum_discount_amount) if self.maximum_discount_amount is not None else None,
             'first_time_user_only': self.first_time_user_only,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()

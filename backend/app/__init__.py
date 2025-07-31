@@ -40,6 +40,15 @@ def create_app():
     app.register_blueprint(products_bp)
     app.register_blueprint(cart_bp)
 
+    # Serve static files from uploads directory
+    from flask import send_from_directory
+    import os
+
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        upload_dir = os.path.join(os.path.dirname(__file__), 'frontend', 'public', 'uploads')
+        return send_from_directory(upload_dir, filename)
+
     @app.route('/')
     def hello():
         return 'Hello, World! (Flask)'

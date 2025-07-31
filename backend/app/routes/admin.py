@@ -214,10 +214,13 @@ def update_product(product_id):
                 except (ValueError, TypeError):
                     return jsonify({'error': 'Invalid stock quantity format'}), 400
             elif field == 'minimum_order_value':
-                try:
-                    setattr(product, field, float(data[field]))
-                except (ValueError, TypeError):
-                    return jsonify({'error': 'Invalid minimum order value format'}), 400
+                if data[field] is None or data[field] == '':
+                    setattr(product, field, None)
+                else:
+                    try:
+                        setattr(product, field, float(data[field]))
+                    except (ValueError, TypeError):
+                        return jsonify({'error': 'Invalid minimum order value format'}), 400
             else:
                 setattr(product, field, data[field])
 
@@ -1159,3 +1162,51 @@ def get_recent_activities():
     return jsonify({
         'activities': activities[:10]
     }), 200
+
+# POST /api/admin/upload-image - Upload product image
+@bp.route('/upload-image', methods=['POST'])
+@jwt_required()
+@admin_required
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+
+    # Check if file is an image
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    if not ('.' in file.filename and
+            file.filename.rsplit('.', 1)[1].lower() in allowed_extensions):
+        return jsonify({'error': 'Invalid file type. Only images are allowed.'}), 400
+
+    try:
+        # Get filename from request or generate one
+        filename = request.form.get('filename', file.filename)
+
+        # Ensure filename is safe
+        import os
+        from werkzeug.utils import secure_filename
+        filename = secure_filename(filename)
+
+        # Create uploads directory if it doesn't exist
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+        upload_dir = os.path.join(project_root, 'frontend', 'public', 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # Save file
+        file_path = os.path.join(upload_dir, filename)
+        file.save(file_path)
+
+        # Return the URL path to the uploaded image
+        image_url = f'/uploads/{filename}'
+
+        return jsonify({
+            'message': 'Image uploaded successfully',
+            'imageUrl': image_url,
+            'filename': filename
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'Failed to upload image: {str(e)}'}), 500

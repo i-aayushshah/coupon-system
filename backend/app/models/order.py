@@ -30,9 +30,9 @@ class Order(db.Model):
         return {
             'id': self.id,
             'user_id': self.user_id,
-            'subtotal': float(self.subtotal),
-            'discount_amount': float(self.discount_amount),
-            'final_total': float(self.final_total),
+            'subtotal': float(self.subtotal) if self.subtotal is not None else 0.0,
+            'discount_amount': float(self.discount_amount) if self.discount_amount is not None else 0.0,
+            'final_total': float(self.final_total) if self.final_total is not None else 0.0,
             'coupon_code_used': self.coupon_code_used,
             'coupon_id': self.coupon_id,
             'order_status': self.order_status,
@@ -65,6 +65,6 @@ class OrderItem(db.Model):
             'product_id': self.product_id,
             'product_name': self.product.name if self.product else None,
             'quantity': self.quantity,
-            'unit_price': float(self.unit_price),
-            'line_total': float(self.line_total)
+            'unit_price': float(self.unit_price) if self.unit_price is not None else 0.0,
+            'line_total': float(self.line_total) if self.line_total is not None else 0.0
         }

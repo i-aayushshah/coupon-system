@@ -50,8 +50,8 @@ class Redemption(db.Model):
             'redeemed_at': self.redeemed_at.isoformat(),
             'discount_applied': self.discount_applied,
             'order_id': self.order_id,
-            'original_amount': float(self.original_amount) if self.original_amount else None,
-            'discount_amount': float(self.discount_amount) if self.discount_amount else None,
-            'final_amount': float(self.final_amount) if self.final_amount else None,
+            'original_amount': float(self.original_amount) if self.original_amount is not None else None,
+            'discount_amount': float(self.discount_amount) if self.discount_amount is not None else None,
+            'final_amount': float(self.final_amount) if self.final_amount is not None else None,
             'products_applied_to': self.get_products_applied_to()
         }

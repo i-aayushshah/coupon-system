@@ -31,14 +31,14 @@ class Product(db.Model):
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'price': float(self.price),
+            'price': float(self.price) if self.price is not None else 0.0,
             'category': self.category,
             'brand': self.brand,
             'sku': self.sku,
             'stock_quantity': self.stock_quantity,
             'is_active': self.is_active,
             'image_url': self.image_url,
-            'minimum_order_value': float(self.minimum_order_value),
+            'minimum_order_value': float(self.minimum_order_value) if self.minimum_order_value is not None else 0.0,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
