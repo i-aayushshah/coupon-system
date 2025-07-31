@@ -14,14 +14,28 @@ const RedemptionHistory = () => {
 
   useEffect(() => {
     fetchRedemptions();
-  }, [currentPage]);
+  }, [currentPage, dateRange]);
 
   const fetchRedemptions = async () => {
     setLoading(true);
     try {
-      const response = await couponAPI.getUserRedemptions(currentPage, 10);
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        per_page: '10'
+      });
+
+      // Add date filters if provided
+      if (dateRange.start) {
+        params.append('start_date', dateRange.start);
+      }
+      if (dateRange.end) {
+        params.append('end_date', dateRange.end);
+      }
+
+      const response = await couponAPI.getUserRedemptions(currentPage, 10, params.toString());
       setRedemptions(response.redemptions || []);
-      setTotalPages(response.total_pages || 1);
+      setTotalPages(response.pagination?.pages || 1);
     } catch (error) {
       console.error('Error fetching redemptions:', error);
       toast.error('Failed to load redemption history');
@@ -31,14 +45,17 @@ const RedemptionHistory = () => {
   };
 
   const handleDateFilter = () => {
+    // Validate date range
+    if (dateRange.start && dateRange.end && new Date(dateRange.start) > new Date(dateRange.end)) {
+      toast.error('Start date cannot be after end date');
+      return;
+    }
     setCurrentPage(1);
-    fetchRedemptions();
   };
 
   const clearFilters = () => {
     setDateRange({ start: '', end: '' });
     setCurrentPage(1);
-    fetchRedemptions();
   };
 
   const exportToCSV = () => {
@@ -47,11 +64,11 @@ const RedemptionHistory = () => {
       headers.join(','),
       ...redemptions.map(redemption => [
         new Date(redemption.redeemed_at).toLocaleDateString(),
-        redemption.coupon_code,
-        formatCurrency(redemption.original_amount),
-        formatCurrency(redemption.discount_amount),
-        formatCurrency(redemption.final_amount),
-        redemption.status
+        redemption.coupon_code || redemption.coupon?.code || 'N/A',
+        formatCurrency(redemption.original_amount || redemption.order?.subtotal || 0),
+        formatCurrency(redemption.discount_amount || redemption.discount_applied || 0),
+        formatCurrency(redemption.final_amount || redemption.order?.final_total || 0),
+        redemption.status || redemption.order?.order_status || 'Completed'
       ].join(','))
     ].join('\n');
 
@@ -109,6 +126,75 @@ const RedemptionHistory = () => {
         {/* Filters */}
         <Card className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filters</h2>
+
+          {/* Quick Filters */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">Quick Filters</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                  setDateRange({
+                    start: lastWeek.toISOString().split('T')[0],
+                    end: today.toISOString().split('T')[0]
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                Last 7 Days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                  setDateRange({
+                    start: lastMonth.toISOString().split('T')[0],
+                    end: today.toISOString().split('T')[0]
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                Last 30 Days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const last3Months = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+                  setDateRange({
+                    start: last3Months.toISOString().split('T')[0],
+                    end: today.toISOString().split('T')[0]
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                Last 3 Months
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const today = new Date();
+                  const thisYear = new Date(today.getFullYear(), 0, 1);
+                  setDateRange({
+                    start: thisYear.toISOString().split('T')[0],
+                    end: today.toISOString().split('T')[0]
+                  });
+                  setCurrentPage(1);
+                }}
+              >
+                This Year
+              </Button>
+            </div>
+          </div>
+
+          {/* Custom Date Range */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -147,6 +233,22 @@ const RedemptionHistory = () => {
             <p className="text-gray-600">
               Showing {redemptions.length} redemption{redemptions.length !== 1 ? 's' : ''}
             </p>
+            {/* Show active filters */}
+            {(dateRange.start || dateRange.end) && (
+              <div className="mt-2">
+                <span className="text-sm text-blue-600 font-medium">Active Filters: </span>
+                {dateRange.start && (
+                  <span className="text-sm text-gray-600 mr-2">
+                    From: {new Date(dateRange.start).toLocaleDateString()}
+                  </span>
+                )}
+                {dateRange.end && (
+                  <span className="text-sm text-gray-600">
+                    To: {new Date(dateRange.end).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <Button onClick={exportToCSV} variant="outline">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,21 +301,21 @@ const RedemptionHistory = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {redemption.coupon_code}
+                            {redemption.coupon_code || redemption.coupon?.code || 'N/A'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {formatCurrency(redemption.original_amount)}
+                          {formatCurrency(redemption.original_amount || redemption.order?.subtotal || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                          -{formatCurrency(redemption.discount_amount)}
+                          -{formatCurrency(redemption.discount_amount || redemption.discount_applied || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                          {formatCurrency(redemption.final_amount)}
+                          {formatCurrency(redemption.final_amount || redemption.order?.final_total || 0)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(redemption.status)}`}>
-                            {redemption.status || 'Completed'}
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(redemption.status || redemption.order?.order_status)}`}>
+                            {redemption.status || redemption.order?.order_status || 'Completed'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -302,7 +404,7 @@ const RedemptionHistory = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Coupon Code:</span>
-                    <span className="font-medium">{selectedRedemption.coupon_code}</span>
+                    <span className="font-medium">{selectedRedemption.coupon_code || selectedRedemption.coupon?.code || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date:</span>
@@ -310,20 +412,20 @@ const RedemptionHistory = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Original Amount:</span>
-                    <span className="font-medium">{formatCurrency(selectedRedemption.original_amount)}</span>
+                    <span className="font-medium">{formatCurrency(selectedRedemption.original_amount || selectedRedemption.order?.subtotal || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Discount:</span>
-                    <span className="font-medium text-green-600">-{formatCurrency(selectedRedemption.discount_amount)}</span>
+                    <span className="font-medium text-green-600">-{formatCurrency(selectedRedemption.discount_amount || selectedRedemption.discount_applied || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Final Amount:</span>
-                    <span className="font-medium">{formatCurrency(selectedRedemption.final_amount)}</span>
+                    <span className="font-medium">{formatCurrency(selectedRedemption.final_amount || selectedRedemption.order?.final_total || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedRedemption.status)}`}>
-                      {selectedRedemption.status || 'Completed'}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedRedemption.status || selectedRedemption.order?.order_status)}`}>
+                      {selectedRedemption.status || selectedRedemption.order?.order_status || 'Completed'}
                     </span>
                   </div>
                 </div>

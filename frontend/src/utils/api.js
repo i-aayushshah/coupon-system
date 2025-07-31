@@ -176,8 +176,11 @@ export const couponAPI = {
   },
 
   // Get user redemptions
-  getUserRedemptions: async (page = 1, perPage = 10) => {
-    const response = await api.get(`/api/coupons/user/redemptions?page=${page}&per_page=${perPage}`);
+  getUserRedemptions: async (page = 1, perPage = 10, queryParams = '') => {
+    const url = queryParams
+      ? `/api/coupons/user/redemptions?${queryParams}`
+      : `/api/coupons/user/redemptions?page=${page}&per_page=${perPage}`;
+    const response = await api.get(url);
     return response.data;
   },
 };

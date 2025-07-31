@@ -373,6 +373,8 @@ def get_user_redemptions():
     user_id = get_jwt_identity()
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
 
     # Get user's redemptions with coupon details and order info
     query = db.session.query(
@@ -383,9 +385,26 @@ def get_user_redemptions():
         Order, Redemption.order_id == Order.id
     ).filter(
         Redemption.user_id == int(user_id)
-    ).order_by(
-        Redemption.redeemed_at.desc()
     )
+
+    # Apply date filters if provided
+    if start_date:
+        try:
+            start_datetime = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            query = query.filter(Redemption.redeemed_at >= start_datetime)
+        except ValueError:
+            pass  # Invalid date format, ignore filter
+
+    if end_date:
+        try:
+            end_datetime = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+            # Add one day to include the entire end date
+            end_datetime = end_datetime + datetime.timedelta(days=1)
+            query = query.filter(Redemption.redeemed_at < end_datetime)
+        except ValueError:
+            pass  # Invalid date format, ignore filter
+
+    query = query.order_by(Redemption.redeemed_at.desc())
 
     # Pagination
     pagination = query.paginate(
@@ -408,7 +427,12 @@ def get_user_redemptions():
                 'discount_value': coupon.discount_value
             },
             'discount_applied': redemption.discount_applied,
-            'redeemed_at': redemption.redeemed_at.isoformat()
+            'redeemed_at': redemption.redeemed_at.isoformat(),
+            'original_amount': float(redemption.original_amount) if redemption.original_amount else 0,
+            'discount_amount': float(redemption.discount_amount) if redemption.discount_amount else redemption.discount_applied,
+            'final_amount': float(redemption.final_amount) if redemption.final_amount else 0,
+            'coupon_code': coupon.code,  # For backward compatibility
+            'status': 'Completed'  # Default status
         }
 
         # Add order information if available
@@ -420,12 +444,11 @@ def get_user_redemptions():
                 'final_total': float(order.final_total),
                 'created_at': order.created_at.isoformat()
             }
+            redemption_data['status'] = order.order_status
 
             # Add product information if available
-            if redemption.original_amount and redemption.final_amount:
-                redemption_data['order']['original_amount'] = float(redemption.original_amount)
-                redemption_data['order']['final_amount'] = float(redemption.final_amount)
-                redemption_data['order']['products_applied_to'] = redemption.get_products_applied_to()
+            if redemption.products_applied_to:
+                redemption_data['products_applied_to'] = redemption.get_products_applied_to()
 
         redemptions.append(redemption_data)
 
