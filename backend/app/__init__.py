@@ -16,6 +16,7 @@ from app.models import * # Imported at module level to resolve SyntaxError
 from app.routes.test_db import bp as test_db_bp
 from app.routes.auth import bp as auth_bp # New: Registered auth blueprint
 from app.routes.admin import bp as admin_bp # New: Registered admin blueprint
+from app.routes.coupons import bp as coupons_bp # New: Registered coupons blueprint
 
 def create_app():
     app = Flask(__name__)
@@ -28,6 +29,7 @@ def create_app():
     app.register_blueprint(test_db_bp)
     app.register_blueprint(auth_bp) # New: Registered auth blueprint
     app.register_blueprint(admin_bp) # New: Registered admin blueprint
+    app.register_blueprint(coupons_bp) # New: Registered coupons blueprint
 
     @app.route('/')
     def hello():
