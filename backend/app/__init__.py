@@ -13,6 +13,7 @@ jwt = JWTManager()
 mail = Mail()
 
 from app.models import *  # <-- Import models at module level
+from app.routes.auth import bp as auth_bp
 
 def create_app():
     app = Flask(__name__)
@@ -24,6 +25,7 @@ def create_app():
 
     from app.routes.test_db import bp as test_db_bp
     app.register_blueprint(test_db_bp)
+    app.register_blueprint(auth_bp)
 
     @app.route('/')
     def hello():
