@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # Test Database
+  test-db:
+    image: postgres:13-alpine
+    container_name: test_db
+    environment:
+      POSTGRES_DB: test_coupon_system
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    volumes:
+      - test_postgres_data:/var/lib/postgresql/data
+      - ./backend/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5433:5432"
+    networks:
+      - test_network
+
+  # Test Backend
+  test-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: test_backend
+    environment:
+      FLASK_APP: run.py
+      FLASK_ENV: testing
+      DATABASE_URL: postgresql://test_user:test_password@test-db:5432/test_coupon_system
+      SECRET_KEY: test-secret-key
+      JWT_SECRET_KEY: test-jwt-secret
+      MAIL_SERVER: smtp.gmail.com
+      MAIL_PORT: 587
+      MAIL_USE_TLS: true
+      MAIL_USERNAME: test@example.com
+      MAIL_PASSWORD: test-password
+    volumes:
+      - ./backend:/app
+      - test_uploads_data:/app/uploads
+    ports:
+      - "5001:5000"
+    depends_on:
+      test-db:
+        condition: service_healthy
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test Frontend
+  test-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: test_frontend
+    volumes:
+      - test_uploads_data:/usr/share/nginx/html/uploads
+    ports:
+      - "3001:80"
+    depends_on:
+      - test-backend
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test Redis
+  test-redis:
+    image: redis:6-alpine
+    container_name: test_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - test_redis_data:/data
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test_postgres_data:
+    driver: local
+  test_redis_data:
+    driver: local
+  test_uploads_data:
+    driver: local
+
+networks:
+  test_network:
+    driver: bridge
