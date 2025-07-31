@@ -56,7 +56,12 @@ export const AuthProvider = ({ children }) => {
       setUser(response.user);
 
       toast.success('Login successful!');
-      return { success: true };
+
+      // Return redirect information if provided
+      return {
+        success: true,
+        redirect_to: response.redirect_to
+      };
     } catch (error) {
       return { success: false, error: error.response?.data?.error || 'Login failed' };
     }

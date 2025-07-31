@@ -18,6 +18,7 @@ class User(db.Model):
     email_verification_expires = Column(DateTime)
     password_reset_token = Column(String(128))
     password_reset_expires = Column(DateTime)
+    last_login = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

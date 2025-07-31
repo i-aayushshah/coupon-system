@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import AdminRedirect from './components/AdminRedirect';
 
 // Import pages
 import Login from './pages/Login';
@@ -16,6 +18,15 @@ import Coupons from './pages/Coupons';
 import Products from './pages/Products';
 import RedemptionHistory from './pages/RedemptionHistory';
 import Cart from './pages/Cart';
+
+// Import admin pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import ManageCoupons from './pages/admin/ManageCoupons';
+import CouponForm from './pages/admin/CouponForm';
+import Users from './pages/admin/Users';
+import ManageProducts from './pages/admin/ManageProducts';
+import ProductForm from './pages/admin/ProductForm';
+import CouponView from './pages/admin/CouponView';
 
 function App() {
   return (
@@ -60,7 +71,9 @@ function App() {
               path="/dashboard"
               element={
                 <ProtectedRoute>
-                  <Dashboard />
+                  <AdminRedirect>
+                    <Dashboard />
+                  </AdminRedirect>
                 </ProtectedRoute>
               }
             />
@@ -68,7 +81,9 @@ function App() {
               path="/profile"
               element={
                 <ProtectedRoute>
-                  <Profile />
+                  <AdminRedirect>
+                    <Profile />
+                  </AdminRedirect>
                 </ProtectedRoute>
               }
             />
@@ -76,7 +91,9 @@ function App() {
               path="/coupons"
               element={
                 <ProtectedRoute>
-                  <Coupons />
+                  <AdminRedirect>
+                    <Coupons />
+                  </AdminRedirect>
                 </ProtectedRoute>
               }
             />
@@ -84,7 +101,9 @@ function App() {
               path="/products"
               element={
                 <ProtectedRoute>
-                  <Products />
+                  <AdminRedirect>
+                    <Products />
+                  </AdminRedirect>
                 </ProtectedRoute>
               }
             />
@@ -92,7 +111,9 @@ function App() {
               path="/redemption-history"
               element={
                 <ProtectedRoute>
-                  <RedemptionHistory />
+                  <AdminRedirect>
+                    <RedemptionHistory />
+                  </AdminRedirect>
                 </ProtectedRoute>
               }
             />
@@ -100,8 +121,92 @@ function App() {
               path="/cart"
               element={
                 <ProtectedRoute>
-                  <Cart />
+                  <AdminRedirect>
+                    <Cart />
+                  </AdminRedirect>
                 </ProtectedRoute>
+              }
+            />
+
+            {/* Admin routes */}
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/coupons"
+              element={
+                <AdminRoute>
+                  <ManageCoupons />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/coupons/create"
+              element={
+                <AdminRoute>
+                  <CouponForm />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/coupons/:id"
+              element={
+                <AdminRoute>
+                  <CouponView />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/coupons/:id/edit"
+              element={
+                <AdminRoute>
+                  <CouponForm />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/products"
+              element={
+                <AdminRoute>
+                  <ManageProducts />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/products/create"
+              element={
+                <AdminRoute>
+                  <ProductForm />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/products/:id"
+              element={
+                <AdminRoute>
+                  <ProductForm />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/products/:id/edit"
+              element={
+                <AdminRoute>
+                  <ProductForm />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <AdminRoute>
+                  <Users />
+                </AdminRoute>
               }
             />
 

@@ -40,7 +40,12 @@ const Login = () => {
       });
 
       if (result.success) {
-        navigate(from, { replace: true });
+        // Check if admin redirect is needed
+        if (result.redirect_to) {
+          navigate(result.redirect_to, { replace: true });
+        } else {
+          navigate(from, { replace: true });
+        }
       } else if (result.requiresVerification) {
         setShowResendVerification(true);
         setResendEmail(data.email);

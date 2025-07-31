@@ -129,6 +129,10 @@ def login():
                 'resend_verification_available': True
             }), 403
 
+    # Update last login time
+    user.last_login = datetime.datetime.utcnow()
+    db.session.commit()
+
     # Create JWT identity with just the user ID as string
     access_token = create_access_token(identity=str(user.id))
 
@@ -140,7 +144,18 @@ def login():
         'last_name': user.last_name,
         'is_admin': user.is_admin
     }
-    return jsonify({'access_token': access_token, 'user': profile}), 200
+
+    # Add redirect information for admin users
+    response_data = {
+        'access_token': access_token,
+        'user': profile
+    }
+
+    # If user is admin, add redirect flag
+    if user.is_admin:
+        response_data['redirect_to'] = '/admin'
+
+    return jsonify(response_data), 200
 
 # POST /api/auth/verify-email
 @bp.route('/verify-email', methods=['POST'])

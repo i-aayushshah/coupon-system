@@ -187,79 +187,93 @@ export const couponAPI = {
 
 // Admin API functions
 export const adminAPI = {
-  // Create coupon
-  createCoupon: async (couponData) => {
-    const response = await api.post('/api/admin/coupons', couponData);
-    return response.data;
-  },
-
-  // Get all coupons
-  getCoupons: async (page = 1, perPage = 10, status = 'all') => {
-    const response = await api.get(`/api/admin/coupons?page=${page}&per_page=${perPage}&status=${status}`);
-    return response.data;
-  },
-
-  // Get coupon details
-  getCoupon: async (id) => {
-    const response = await api.get(`/api/admin/coupons/${id}`);
-    return response.data;
-  },
-
-  // Update coupon
-  updateCoupon: async (id, couponData) => {
-    const response = await api.put(`/api/admin/coupons/${id}`, couponData);
-    return response.data;
-  },
-
-  // Delete coupon
-  deleteCoupon: async (id) => {
-    const response = await api.delete(`/api/admin/coupons/${id}`);
-    return response.data;
-  },
-
-  // Get coupon redemptions
-  getCouponRedemptions: async (id, page = 1, perPage = 10) => {
-    const response = await api.get(`/api/admin/coupons/${id}/redemptions?page=${page}&per_page=${perPage}`);
-    return response.data;
-  },
-
-  // Get admin dashboard
+  // Dashboard
   getDashboard: async () => {
     const response = await api.get('/api/admin/dashboard');
     return response.data;
   },
 
-  // Create product
+  getRecentActivities: async () => {
+    const response = await api.get('/api/admin/activities');
+    return response.data;
+  },
+
+  // Coupons
+  createCoupon: async (couponData) => {
+    const response = await api.post('/api/admin/coupons', couponData);
+    return response.data;
+  },
+
+  getCoupons: async (page = 1, perPage = 10, status = 'all', search = '') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    if (status && status !== 'all') params.append('status', status);
+    if (search) params.append('search', search);
+
+    const response = await api.get(`/api/admin/coupons?${params}`);
+    return response.data;
+  },
+
+  getCoupon: async (id) => {
+    const response = await api.get(`/api/admin/coupons/${id}`);
+    return response.data;
+  },
+
+  updateCoupon: async (id, couponData) => {
+    const response = await api.put(`/api/admin/coupons/${id}`, couponData);
+    return response.data;
+  },
+
+  deleteCoupon: async (id) => {
+    const response = await api.delete(`/api/admin/coupons/${id}`);
+    return response.data;
+  },
+
+  getCouponRedemptions: async (id, page = 1, perPage = 10) => {
+    const response = await api.get(`/api/admin/coupons/${id}/redemptions?page=${page}&per_page=${perPage}`);
+    return response.data;
+  },
+
+  // Products
   createProduct: async (productData) => {
     const response = await api.post('/api/admin/products', productData);
     return response.data;
   },
 
-  // Get all products
-  getProducts: async (page = 1, perPage = 10, category = '', status = 'all') => {
-    const response = await api.get(`/api/admin/products?page=${page}&per_page=${perPage}&category=${category}&status=${status}`);
+  getProducts: async (page = 1, perPage = 10, category = 'all', status = 'all') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    if (category && category !== 'all') params.append('category', category);
+    if (status && status !== 'all') params.append('status', status);
+
+    const response = await api.get(`/api/admin/products?${params}`);
     return response.data;
   },
 
-  // Get product details
   getProduct: async (id) => {
     const response = await api.get(`/api/admin/products/${id}`);
     return response.data;
   },
 
-  // Update product
   updateProduct: async (id, productData) => {
     const response = await api.put(`/api/admin/products/${id}`, productData);
     return response.data;
   },
 
-  // Delete product
   deleteProduct: async (id) => {
     const response = await api.delete(`/api/admin/products/${id}`);
     return response.data;
   },
 
-  // Bulk upload products
+  getCategories: async () => {
+    const response = await api.get('/api/admin/categories');
+    return response.data;
+  },
+
   bulkUploadProducts: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -270,6 +284,38 @@ export const adminAPI = {
     });
     return response.data;
   },
+
+  // Users
+  getUsers: async (page = 1, perPage = 10, search = '') => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString()
+    });
+    if (search) params.append('search', search);
+
+    const response = await api.get(`/api/admin/users?${params}`);
+    return response.data;
+  },
+
+  getUser: async (id) => {
+    const response = await api.get(`/api/admin/users/${id}`);
+    return response.data;
+  },
+
+  getUserStats: async (id) => {
+    const response = await api.get(`/api/admin/users/${id}/stats`);
+    return response.data;
+  },
+
+  updateUserRole: async (id, data) => {
+    const response = await api.put(`/api/admin/users/${id}/role`, data);
+    return response.data;
+  },
+
+  updateUserStatus: async (id, data) => {
+    const response = await api.put(`/api/admin/users/${id}/status`, data);
+    return response.data;
+  }
 };
 
 // Product API functions

@@ -29,8 +29,8 @@ def is_valid_coupon_code(code):
 # Helper: validate date range
 def is_valid_date_range(start_date, end_date):
     try:
-        start = datetime.datetime.strptime(start_date, '%Y-%m-%d')
-        end = datetime.datetime.strptime(end_date, '%Y-%m-%d')
+        start = parse_date_string(start_date)
+        end = parse_date_string(end_date)
         return start < end
     except ValueError:
         return False
@@ -42,6 +42,29 @@ def is_valid_discount(discount_type, discount_value):
     elif discount_type == 'fixed':
         return discount_value > 0
     return False
+
+# Helper: parse date string to datetime
+def parse_date_string(date_str):
+    """Parse date string that could be in date or datetime format"""
+    try:
+        if 'T' in date_str:
+            # Try different datetime formats
+            if ':' in date_str.split('T')[1]:
+                time_part = date_str.split('T')[1]
+                if time_part.count(':') == 2:
+                    # Full ISO format: "2024-01-01T10:30:00"
+                    return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S')
+                else:
+                    # datetime-local format: "2024-01-01T10:30"
+                    return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M')
+            else:
+                # Date with T but no time: "2024-01-01T"
+                return datetime.datetime.strptime(date_str.split('T')[0], '%Y-%m-%d')
+        else:
+            # date-only format: "2024-01-01"
+            return datetime.datetime.strptime(date_str, '%Y-%m-%d')
+    except ValueError:
+        raise ValueError(f'Invalid date format. Expected YYYY-MM-DD, YYYY-MM-DDTHH:MM, or YYYY-MM-DDTHH:MM:SS, got: {date_str}')
 
 # Helper: validate product data
 def is_valid_product_data(data):
@@ -338,6 +361,13 @@ def create_coupon():
     if Coupon.query.filter_by(code=code).first():
         return jsonify({'error': 'Coupon code already exists'}), 409
 
+    # Parse dates
+    try:
+        start_datetime = parse_date_string(start_date)
+        end_datetime = parse_date_string(end_date)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
     if not is_valid_date_range(start_date, end_date):
         return jsonify({'error': 'Invalid date range'}), 400
 
@@ -366,8 +396,8 @@ def create_coupon():
         is_public=is_public,
         max_uses=max_uses,
         current_uses=0,
-        start_date=datetime.datetime.strptime(start_date, '%Y-%m-%d'),
-        end_date=datetime.datetime.strptime(end_date, '%Y-%m-%d'),
+        start_date=start_datetime,
+        end_date=end_datetime,
         created_by=admin_user.id,
         is_active=True,
         minimum_order_value=minimum_order_value,
@@ -396,14 +426,39 @@ def list_coupons():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     status = request.args.get('status', 'all')  # all, active, inactive
+    search = request.args.get('search', '').strip()
 
     query = Coupon.query
 
     # Filter by status
+    now = datetime.datetime.utcnow()
     if status == 'active':
-        query = query.filter(Coupon.is_active == True)
+        # Active: is_active=True AND current date is between start and end dates
+        query = query.filter(
+            Coupon.is_active == True,
+            Coupon.start_date <= now,
+            Coupon.end_date >= now
+        )
     elif status == 'inactive':
+        # Inactive: is_active=False
         query = query.filter(Coupon.is_active == False)
+    elif status == 'expired':
+        # Expired: end_date has passed
+        query = query.filter(Coupon.end_date < now)
+    elif status == 'pending':
+        # Pending: start_date is in the future
+        query = query.filter(Coupon.start_date > now)
+
+    # Search functionality
+    if search:
+        search_term = f'%{search}%'
+        query = query.filter(
+            db.or_(
+                Coupon.code.ilike(search_term),
+                Coupon.title.ilike(search_term),
+                Coupon.description.ilike(search_term)
+            )
+        )
 
     # Order by creation date
     query = query.order_by(Coupon.created_at.desc())
@@ -466,8 +521,8 @@ def get_coupon(coupon_id):
             'is_public': coupon.is_public,
             'max_uses': coupon.max_uses,
             'current_uses': coupon.current_uses,
-            'start_date': coupon.start_date.strftime('%Y-%m-%d'),
-            'end_date': coupon.end_date.strftime('%Y-%m-%d'),
+            'start_date': coupon.start_date.isoformat() if coupon.start_date else None,
+            'end_date': coupon.end_date.isoformat() if coupon.end_date else None,
             'is_active': coupon.is_active,
             'created_at': coupon.created_at.isoformat(),
             'updated_at': coupon.updated_at.isoformat(),
@@ -502,10 +557,10 @@ def update_coupon(coupon_id):
         if field in data:
             if field in ['start_date', 'end_date']:
                 try:
-                    date_value = datetime.datetime.strptime(data[field], '%Y-%m-%d')
+                    date_value = parse_date_string(data[field])
                     setattr(coupon, field, date_value)
-                except ValueError:
-                    return jsonify({'error': f'Invalid {field} format'}), 400
+                except ValueError as e:
+                    return jsonify({'error': str(e)}), 400
             elif field == 'applicable_categories':
                 # Handle JSON field for categories
                 if isinstance(data[field], list):
@@ -785,4 +840,322 @@ def admin_dashboard():
         'most_redeemed_coupons': most_redeemed_list,
         'recent_redemptions': recent_redemptions_list,
         'top_selling_products': top_products_list
+    }), 200
+
+# GET /api/admin/users - List all users with pagination
+@bp.route('/users', methods=['GET'])
+@jwt_required()
+@admin_required
+def list_users():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    search = request.args.get('search', '').strip()
+
+    query = User.query
+
+    # Apply search filter
+    if search:
+        query = query.filter(
+            db.or_(
+                User.username.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%'),
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%')
+            )
+        )
+
+    # Order by creation date
+    query = query.order_by(User.created_at.desc())
+
+    # Pagination
+    pagination = query.paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    users = []
+    for user in pagination.items:
+        users.append({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_admin': user.is_admin,
+            'email_verified': user.email_verified,
+            'created_at': user.created_at.isoformat(),
+            'updated_at': user.updated_at.isoformat(),
+            'last_login': user.last_login.isoformat() if user.last_login else None
+        })
+
+    return jsonify({
+        'users': users,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'has_next': pagination.has_next,
+            'has_prev': pagination.has_prev
+        }
+    }), 200
+
+# GET /api/admin/users/<id> - Get specific user details
+@bp.route('/users/<int:user_id>', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    return jsonify({
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'phone': user.phone,
+            'is_admin': user.is_admin,
+            'email_verified': user.email_verified,
+            'created_at': user.created_at.isoformat(),
+            'updated_at': user.updated_at.isoformat(),
+            'last_login': user.last_login.isoformat() if user.last_login else None
+        }
+    }), 200
+
+# GET /api/admin/users/<id>/stats - Get user statistics
+@bp.route('/users/<int:user_id>/stats', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_user_stats(user_id):
+    user = User.query.get_or_404(user_id)
+
+    # Get user's redemption count
+    redemption_count = Redemption.query.filter_by(user_id=user_id).count()
+
+    # Get user's total savings
+    total_savings = db.session.query(db.func.sum(Redemption.discount_applied)).filter(
+        Redemption.user_id == user_id
+    ).scalar() or 0
+
+    # Get user's order count
+    order_count = Order.query.filter_by(user_id=user_id).count()
+
+    # Get user's total spent
+    total_spent = db.session.query(db.func.sum(Order.final_total)).filter(
+        Order.user_id == user_id
+    ).scalar() or 0
+
+    # Get recent redemptions (last 5)
+    recent_redemptions = db.session.query(
+        Redemption, Coupon
+    ).join(
+        Coupon, Redemption.coupon_id == Coupon.id
+    ).filter(
+        Redemption.user_id == user_id
+    ).order_by(Redemption.redeemed_at.desc()).limit(5).all()
+
+    recent_redemptions_list = []
+    for redemption, coupon in recent_redemptions:
+        recent_redemptions_list.append({
+            'id': redemption.id,
+            'coupon_code': coupon.code,
+            'coupon_title': coupon.title,
+            'discount_applied': redemption.discount_applied,
+            'redeemed_at': redemption.redeemed_at.isoformat()
+        })
+
+    return jsonify({
+        'stats': {
+            'redemption_count': redemption_count,
+            'total_savings': round(float(total_savings), 2),
+            'order_count': order_count,
+            'total_spent': round(float(total_spent), 2)
+        },
+        'recent_redemptions': recent_redemptions_list
+    }), 200
+
+# PUT /api/admin/users/<id>/role - Update user admin role
+@bp.route('/users/<int:user_id>/role', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_user_role(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    if 'is_admin' not in data:
+        return jsonify({'error': 'is_admin field is required'}), 400
+
+    if not isinstance(data['is_admin'], bool):
+        return jsonify({'error': 'is_admin must be a boolean'}), 400
+
+    # Get current admin user
+    current_admin_id = get_jwt_identity()
+
+    # Prevent admin from removing their own admin status
+    if int(current_admin_id) == user_id and not data['is_admin']:
+        return jsonify({'error': 'You cannot remove your own admin status'}), 400
+
+    user.is_admin = data['is_admin']
+    user.updated_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'message': f'User role updated successfully',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'is_admin': user.is_admin
+        }
+    }), 200
+
+# PUT /api/admin/users/<id>/status - Update user status (email verification)
+@bp.route('/users/<int:user_id>/status', methods=['PUT'])
+@jwt_required()
+@admin_required
+def update_user_status(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    if 'email_verified' not in data:
+        return jsonify({'error': 'email_verified field is required'}), 400
+
+    if not isinstance(data['email_verified'], bool):
+        return jsonify({'error': 'email_verified must be a boolean'}), 400
+
+    user.email_verified = data['email_verified']
+    user.updated_at = datetime.datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'message': f'User status updated successfully',
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'email_verified': user.email_verified
+        }
+    }), 200
+
+# GET /api/admin/categories - Get all product categories
+@bp.route('/categories', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_categories():
+    # Get unique categories from products
+    categories = db.session.query(Product.category).distinct().filter(
+        Product.category.isnot(None),
+        Product.category != ''
+    ).order_by(Product.category).all()
+
+    # Extract category names from the query result
+    category_list = [category[0] for category in categories]
+
+    return jsonify({
+        'categories': category_list
+    }), 200
+
+# GET /api/admin/activities - Recent activities for admin dashboard
+@bp.route('/activities', methods=['GET'])
+@jwt_required()
+@admin_required
+def get_recent_activities():
+    # Get recent activities from different sources
+    activities = []
+
+    # Recent user registrations (last 7 days)
+    week_ago = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    recent_users = User.query.filter(
+        User.created_at >= week_ago
+    ).order_by(User.created_at.desc()).limit(5).all()
+
+    for user in recent_users:
+        activities.append({
+            'id': f'user_{user.id}',
+            'type': 'user_registered',
+            'title': 'New User Registration',
+            'description': f'{user.first_name} {user.last_name} joined the platform',
+            'timestamp': user.created_at.isoformat(),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            }
+        })
+
+    # Recent coupon creations (last 7 days)
+    recent_coupons = Coupon.query.filter(
+        Coupon.created_at >= week_ago
+    ).order_by(Coupon.created_at.desc()).limit(5).all()
+
+    for coupon in recent_coupons:
+        activities.append({
+            'id': f'coupon_{coupon.id}',
+            'type': 'coupon_created',
+            'title': 'New Coupon Created',
+            'description': f'Coupon "{coupon.title}" ({coupon.code}) was created',
+            'timestamp': coupon.created_at.isoformat(),
+            'coupon': {
+                'id': coupon.id,
+                'code': coupon.code,
+                'title': coupon.title
+            }
+        })
+
+    # Recent redemptions (last 7 days)
+    recent_redemptions = db.session.query(
+        Redemption, User, Coupon
+    ).join(
+        User, Redemption.user_id == User.id
+    ).join(
+        Coupon, Redemption.coupon_id == Coupon.id
+    ).filter(
+        Redemption.redeemed_at >= week_ago
+    ).order_by(Redemption.redeemed_at.desc()).limit(5).all()
+
+    for redemption, user, coupon in recent_redemptions:
+        activities.append({
+            'id': f'redemption_{redemption.id}',
+            'type': 'coupon_redeemed',
+            'title': 'Coupon Redeemed',
+            'description': f'{user.first_name} {user.last_name} redeemed {coupon.code}',
+            'timestamp': redemption.redeemed_at.isoformat(),
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email
+            },
+            'coupon': {
+                'id': coupon.id,
+                'code': coupon.code,
+                'title': coupon.title
+            },
+            'discount_applied': redemption.discount_applied
+        })
+
+    # Recent orders (last 7 days)
+    recent_orders = Order.query.filter(
+        Order.created_at >= week_ago
+    ).order_by(Order.created_at.desc()).limit(5).all()
+
+    for order in recent_orders:
+        activities.append({
+            'id': f'order_{order.id}',
+            'type': 'order_placed',
+            'title': 'New Order Placed',
+            'description': f'Order #{order.id} placed for ${order.final_total}',
+            'timestamp': order.created_at.isoformat(),
+            'order': {
+                'id': order.id,
+                'order_status': order.order_status,
+                'final_total': float(order.final_total)
+            }
+        })
+
+    # Sort all activities by timestamp (most recent first)
+    activities.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    # Return only the most recent 10 activities
+    return jsonify({
+        'activities': activities[:10]
     }), 200
