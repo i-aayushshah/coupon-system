@@ -1,0 +1,11 @@
+name,sku,brand,category,description,price,stock_quantity,minimum_order_value,image_url,is_active
+Nike Air Max 270,NIKE270,Nike,Clothing,Comfortable running shoes with Air Max technology,129.99,200,25.00,https://example.com/nike-airmax.jpg,true
+Adidas Ultraboost 22,ADIDAS22,Adidas,Clothing,Responsive running shoes with Boost midsole technology,179.99,150,30.00,https://example.com/adidas-ultraboost.jpg,true
+Levi's 501 Original Jeans,LEVI501,Levi's,Clothing,Classic straight-fit jeans in dark wash denim,89.99,300,20.00,https://example.com/levis-501.jpg,true
+Uniqlo Heattech T-Shirt,UNIQLOHT,Uniqlo,Clothing,Moisture-wicking thermal t-shirt for cold weather,19.99,500,10.00,https://example.com/uniqlo-heattech.jpg,true
+Zara Oversized Blazer,ZARABLAZ,Zara,Clothing,Modern oversized blazer in wool blend fabric,129.99,80,50.00,https://example.com/zara-blazer.jpg,true
+H&M Cotton Hoodie,HMHOOD,H&M,Clothing,Comfortable cotton hoodie with kangaroo pocket,39.99,400,15.00,https://example.com/hm-hoodie.jpg,true
+Converse Chuck Taylor All Star,CONVCHK,Converse,Clothing,Iconic canvas sneakers in classic white,59.99,250,20.00,https://example.com/converse-chuck.jpg,true
+Vans Old Skool,VANSOLD,Vans,Clothing,Classic skate shoes with side stripe design,69.99,180,25.00,https://example.com/vans-oldskool.jpg,true
+The North Face Denali Jacket,TNFDENA,The North Face,Clothing,Insulated fleece jacket for outdoor activities,149.99,120,75.00,https://example.com/tnf-denali.jpg,true
+Patagonia Better Sweater,PATSWEAT,Patagonia,Clothing,Sustainable fleece sweater made from recycled materials,139.99,90,50.00,https://example.com/patagonia-sweater.jpg,true

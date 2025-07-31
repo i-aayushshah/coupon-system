@@ -26,6 +26,7 @@ import CouponForm from './pages/admin/CouponForm';
 import Users from './pages/admin/Users';
 import ManageProducts from './pages/admin/ManageProducts';
 import ProductForm from './pages/admin/ProductForm';
+import ImportProducts from './pages/admin/ImportProducts';
 import CouponView from './pages/admin/CouponView';
 
 function App() {
@@ -198,6 +199,14 @@ function App() {
               element={
                 <AdminRoute>
                   <ProductForm />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/products/import"
+              element={
+                <AdminRoute>
+                  <ImportProducts />
                 </AdminRoute>
               }
             />

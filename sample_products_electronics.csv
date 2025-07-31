@@ -1,0 +1,11 @@
+name,sku,brand,category,description,price,stock_quantity,minimum_order_value,image_url,is_active
+iPhone 15 Pro,IPHONE15P,Apple,Electronics,Latest iPhone with A17 Pro chip and titanium design,999.99,50,100.00,https://example.com/iphone15.jpg,true
+Samsung Galaxy S24,SAMS24,Samsung,Electronics,Android flagship with AI features and 200MP camera,899.99,75,50.00,https://example.com/galaxy-s24.jpg,true
+MacBook Air M3,MBAIRM3,Apple,Electronics,13-inch laptop with M3 chip and 18-hour battery life,1199.99,30,200.00,https://example.com/macbook-air.jpg,true
+Sony WH-1000XM5,SONYXM5,Sony,Electronics,Wireless noise-canceling headphones with 30-hour battery,349.99,100,25.00,https://example.com/sony-headphones.jpg,true
+iPad Air 5th Gen,IPADAIR5,Apple,Electronics,10.9-inch tablet with M1 chip and Apple Pencil support,599.99,40,75.00,https://example.com/ipad-air.jpg,true
+DJI Mini 3 Pro,DJIMINI3,DJI,Electronics,Ultralight drone with 4K camera and 34-minute flight time,759.99,25,100.00,https://example.com/dji-mini3.jpg,true
+Nintendo Switch OLED,NSWITCHO,Nintendo,Electronics,7-inch OLED screen gaming console with enhanced audio,349.99,60,50.00,https://example.com/switch-oled.jpg,true
+Bose QuietComfort 45,BOSEQC45,Bose,Electronics,Over-ear headphones with noise canceling and 24-hour battery,329.99,80,30.00,https://example.com/bose-qc45.jpg,true
+GoPro Hero 11 Black,GOPRO11,GoPro,Electronics,Action camera with 5.3K video and HyperSmooth 5.0,449.99,45,75.00,https://example.com/gopro-hero11.jpg,true
+Microsoft Surface Pro 9,SURFPRO9,Microsoft,Electronics,2-in-1 laptop with 13-inch touchscreen and Surface Pen,1099.99,20,150.00,https://example.com/surface-pro9.jpg,true

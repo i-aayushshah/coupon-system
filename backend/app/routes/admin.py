@@ -285,14 +285,22 @@ def bulk_upload_products():
         for row_num, row in enumerate(csv_reader, start=2):  # Start from 2 (header is row 1)
             try:
                 # Validate required fields
-                if not row.get('name') or not row.get('price') or not row.get('category'):
-                    errors.append(f'Row {row_num}: Missing required fields')
+                if not row.get('name') or not row.get('price'):
+                    errors.append(f'Row {row_num}: Missing required fields (name and price are required)')
                     error_count += 1
                     continue
 
                 # Check SKU uniqueness
                 sku = row.get('sku', '').strip()
-                if sku and Product.query.filter_by(sku=sku).first():
+                if not sku:
+                    # Generate SKU if not provided
+                    import random
+                    import string
+                    sku = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                    # Ensure uniqueness
+                    while Product.query.filter_by(sku=sku).first():
+                        sku = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                elif Product.query.filter_by(sku=sku).first():
                     errors.append(f'Row {row_num}: SKU already exists')
                     error_count += 1
                     continue
@@ -302,13 +310,13 @@ def bulk_upload_products():
                     name=row['name'].strip(),
                     description=row.get('description', '').strip(),
                     price=float(row['price']),
-                    category=row['category'].strip(),
+                    category=row.get('category', '').strip() or 'All',
                     brand=row.get('brand', '').strip(),
                     sku=sku,
                     stock_quantity=int(row.get('stock_quantity', 0)),
                     is_active=row.get('is_active', 'true').lower() == 'true',
                     image_url=row.get('image_url', '').strip(),
-                    minimum_order_value=float(row.get('minimum_order_value', 0)),
+                    minimum_order_value=float(row.get('minimum_order_value', 0)) if row.get('minimum_order_value') else None,
                     created_by=admin_user.id,
                     created_at=datetime.datetime.utcnow(),
                     updated_at=datetime.datetime.utcnow()
@@ -326,7 +334,7 @@ def bulk_upload_products():
 
         return jsonify({
             'message': 'Bulk upload completed',
-            'success_count': success_count,
+            'imported_count': success_count,
             'error_count': error_count,
             'errors': errors
         }), 200
