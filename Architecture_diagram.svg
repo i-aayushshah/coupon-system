@@ -1,0 +1,301 @@
+<svg viewBox="0 0 1400 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="frontendGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#61DAFB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#21D4FD;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="backendGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#45A049;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="dbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF9800;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F57C00;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="authGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#9C27B0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7B1FA2;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.3)"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1400" height="1000" fill="#f8fafc"/>
+
+  <!-- Title -->
+  <text x="700" y="30" font-family="georgia, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#1e293b">
+    Coupon Management System - Architecture Diagram
+  </text>
+
+  <!-- Frontend Layer -->
+  <rect x="50" y="80" width="1300" height="180" rx="10" fill="url(#frontendGrad)" opacity="0.1" stroke="#61DAFB" stroke-width="2"/>
+  <text x="70" y="105" font-family="georgia, sans-serif" font-size="18" font-weight="bold" fill="#0284c7">Frontend Layer (React)</text>
+
+  <!-- User Components -->
+  <rect x="80" y="120" width="150" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="155" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">User Pages</text>
+  <text x="155" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Dashboard, Profile</text>
+  <text x="155" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Coupons, Products, Cart</text>
+
+  <!-- Admin Components -->
+  <rect x="250" y="120" width="150" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="325" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Admin Pages</text>
+  <text x="325" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Dashboard, Manage</text>
+  <text x="325" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Coupons, Products, Users</text>
+
+  <!-- Shared Components -->
+  <rect x="420" y="120" width="150" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="495" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Shared Components</text>
+  <text x="495" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Forms, Layout</text>
+  <text x="495" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Notifications, Routes</text>
+
+  <!-- State Management -->
+  <rect x="590" y="120" width="120" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="650" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">State Management</text>
+  <text x="650" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">React Hooks</text>
+  <text x="650" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">useAuth, Context</text>
+
+  <!-- HTTP Client -->
+  <rect x="730" y="120" width="120" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="790" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">HTTP Client</text>
+  <text x="790" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Axios</text>
+  <text x="790" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">API Utils</text>
+
+  <!-- Styling -->
+  <rect x="870" y="120" width="120" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="930" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Styling</text>
+  <text x="930" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">TailwindCSS</text>
+  <text x="930" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Responsive Design</text>
+
+  <!-- Routing -->
+  <rect x="1010" y="120" width="120" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1070" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Routing</text>
+  <text x="1070" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">React Router</text>
+  <text x="1070" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Protected Routes</text>
+
+  <!-- Form Handling -->
+  <rect x="1150" y="120" width="120" height="60" rx="5" fill="#ffffff" stroke="#61DAFB" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1210" y="140" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Form Handling</text>
+  <text x="1210" y="155" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">React Hook Form</text>
+  <text x="1210" y="168" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Validation</text>
+
+  <!-- API Gateway/Communication Layer -->
+  <rect x="50" y="290" width="1300" height="60" rx="10" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+  <text x="700" y="315" font-family="georgia, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#475569">API Communication Layer</text>
+  <text x="300" y="335" font-family="georgia, sans-serif" font-size="12" text-anchor="middle" fill="#64748b">HTTP/HTTPS Requests</text>
+  <text x="500" y="335" font-family="georgia, sans-serif" font-size="12" text-anchor="middle" fill="#64748b">JWT Authentication</text>
+  <text x="700" y="335" font-family="georgia, sans-serif" font-size="12" text-anchor="middle" fill="#64748b">RESTful APIs</text>
+  <text x="900" y="335" font-family="georgia, sans-serif" font-size="12" text-anchor="middle" fill="#64748b">CORS Handling</text>
+  <text x="1100" y="335" font-family="georgia, sans-serif" font-size="12" text-anchor="middle" fill="#64748b">Error Handling</text>
+
+  <!-- Backend Layer -->
+  <rect x="50" y="380" width="1300" height="180" rx="10" fill="url(#backendGrad)" opacity="0.1" stroke="#4CAF50" stroke-width="2"/>
+  <text x="70" y="405" font-family="georgia, sans-serif" font-size="18" font-weight="bold" fill="#16a34a">Backend Layer (Flask)</text>
+
+  <!-- Authentication Service -->
+  <rect x="80" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#9C27B0" stroke-width="2" filter="url(#shadow)"/>
+  <text x="150" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Authentication</text>
+  <text x="150" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">JWT Tokens</text>
+  <text x="150" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Email Verification</text>
+  <text x="150" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Password Reset</text>
+
+  <!-- User Management -->
+  <rect x="240" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="310" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">User Management</text>
+  <text x="310" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Profile Management</text>
+  <text x="310" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Role-based Access</text>
+  <text x="310" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Activity Tracking</text>
+
+  <!-- Coupon Service -->
+  <rect x="400" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="470" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Coupon Service</text>
+  <text x="470" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">CRUD Operations</text>
+  <text x="470" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Validation Rules</text>
+  <text x="470" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Redemption Logic</text>
+
+  <!-- Product Service -->
+  <rect x="560" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="630" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Product Service</text>
+  <text x="630" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Inventory Management</text>
+  <text x="630" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">CSV Import</text>
+  <text x="630" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Search &amp; Filtering</text>
+
+  <!-- Cart & Order Service -->
+  <rect x="720" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="790" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Cart &amp; Orders</text>
+  <text x="790" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Shopping Cart</text>
+  <text x="790" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Checkout Process</text>
+  <text x="790" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Order History</text>
+
+  <!-- Admin Service -->
+  <rect x="880" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="950" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Admin Service</text>
+  <text x="950" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Dashboard Analytics</text>
+  <text x="950" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">User Management</text>
+  <text x="950" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">System Settings</text>
+
+  <!-- File Service -->
+  <rect x="1040" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1110" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">File Service</text>
+  <text x="1110" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Image Upload</text>
+  <text x="1110" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">CSV Processing</text>
+  <text x="1110" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">File Validation</text>
+
+  <!-- Email Service -->
+  <rect x="1200" y="420" width="140" height="70" rx="5" fill="#ffffff" stroke="#4CAF50" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1270" y="440" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Email Service</text>
+  <text x="1270" y="455" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Verification Emails</text>
+  <text x="1270" y="468" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Password Reset</text>
+  <text x="1270" y="481" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">Notifications</text>
+
+  <!-- Database Layer -->
+  <rect x="50" y="590" width="1300" height="180" rx="10" fill="url(#dbGrad)" opacity="0.1" stroke="#FF9800" stroke-width="2"/>
+  <text x="70" y="615" font-family="georgia, sans-serif" font-size="18" font-weight="bold" fill="#ea580c">Database Layer (SQLite)</text>
+
+  <!-- Users Table -->
+  <rect x="80" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="155" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Users Table</text>
+  <text x="155" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, username, email</text>
+  <text x="155" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">password, role, status</text>
+  <text x="155" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">phone, last_login</text>
+  <text x="155" y="709" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">email_verified</text>
+
+  <!-- Coupons Table -->
+  <rect x="250" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="325" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Coupons Table</text>
+  <text x="325" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, code, title</text>
+  <text x="325" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">discount_type, value</text>
+  <text x="325" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">min_order, max_discount</text>
+  <text x="325" y="709" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">categories, dates</text>
+
+  <!-- Products Table -->
+  <rect x="420" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="495" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Products Table</text>
+  <text x="495" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, name, description</text>
+  <text x="495" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">price, category, brand</text>
+  <text x="495" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">sku, stock_quantity</text>
+  <text x="495" y="709" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">image_url, status</text>
+
+  <!-- Orders Table -->
+  <rect x="590" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="665" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Orders Table</text>
+  <text x="665" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, user_id, total</text>
+  <text x="665" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">status, shipping</text>
+  <text x="665" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">payment_method</text>
+  <text x="665" y="709" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">created_at</text>
+
+  <!-- Order Items Table -->
+  <rect x="760" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="835" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Order Items Table</text>
+  <text x="835" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, order_id</text>
+  <text x="835" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">product_id, quantity</text>
+  <text x="835" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">price, total</text>
+
+  <!-- Redemptions Table -->
+  <rect x="930" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1005" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Redemptions Table</text>
+  <text x="1005" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, user_id</text>
+  <text x="1005" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">coupon_id, order_id</text>
+  <text x="1005" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">discount_applied</text>
+  <text x="1005" y="709" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">redeemed_at</text>
+
+  <!-- Activities Table -->
+  <rect x="1100" y="635" width="150" height="80" rx="5" fill="#ffffff" stroke="#FF9800" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1175" y="655" font-family="georgia, sans-serif" font-size="11" font-weight="bold" text-anchor="middle" fill="#1e293b">Activities Table</text>
+  <text x="1175" y="670" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">id, user_id, action</text>
+  <text x="1175" y="683" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">description, ip</text>
+  <text x="1175" y="696" font-family="georgia, sans-serif" font-size="9" text-anchor="middle" fill="#64748b">created_at</text>
+
+  <!-- External Services -->
+  <rect x="50" y="800" width="1300" height="120" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
+  <text x="70" y="825" font-family="georgia, sans-serif" font-size="18" font-weight="bold" fill="#475569">External Services &amp; Storage</text>
+
+  <!-- Email Service -->
+  <rect x="150" y="845" width="180" height="60" rx="5" fill="#ffffff" stroke="#e11d48" stroke-width="2" filter="url(#shadow)"/>
+  <text x="240" y="865" font-family="georgia, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1e293b">Email Service (SMTP)</text>
+  <text x="240" y="880" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">Gmail SMTP Server</text>
+  <text x="240" y="895" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">Email Verification &amp; Notifications</text>
+
+  <!-- File Storage -->
+  <rect x="350" y="845" width="180" height="60" rx="5" fill="#ffffff" stroke="#059669" stroke-width="2" filter="url(#shadow)"/>
+  <text x="440" y="865" font-family="georgia, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1e293b">File Storage (Local)</text>
+  <text x="440" y="880" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">Product Images</text>
+  <text x="440" y="895" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">CSV Upload Processing</text>
+
+  <!-- Security & Validation -->
+  <rect x="550" y="845" width="180" height="60" rx="5" fill="#ffffff" stroke="#9333ea" stroke-width="2" filter="url(#shadow)"/>
+  <text x="640" y="865" font-family="georgia, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1e293b">Security Layer</text>
+  <text x="640" y="880" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">JWT Authentication</text>
+  <text x="640" y="895" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">BCrypt Password Hashing</text>
+
+  <!-- Development Tools -->
+  <rect x="750" y="845" width="180" height="60" rx="5" fill="#ffffff" stroke="#dc2626" stroke-width="2" filter="url(#shadow)"/>
+  <text x="840" y="865" font-family="georgia, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1e293b">Development Tools</text>
+  <text x="840" y="880" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">Flask Development Server</text>
+  <text x="840" y="895" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">React Development Server</text>
+
+  <!-- Monitoring & Logging -->
+  <rect x="950" y="845" width="180" height="60" rx="5" fill="#ffffff" stroke="#0284c7" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1040" y="865" font-family="georgia, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1e293b">Monitoring &amp; Logs</text>
+  <text x="1040" y="880" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">Activity Tracking</text>
+  <text x="1040" y="895" font-family="georgia, sans-serif" font-size="10" text-anchor="middle" fill="#64748b">Error Logging</text>
+
+  <!-- Data Flow Arrows -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569" />
+    </marker>
+  </defs>
+
+  <!-- Frontend to API Communication -->
+  <line x1="790" y1="180" x2="790" y2="290" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="800" y="235" font-family="georgia, sans-serif" font-size="10" fill="#475569">API Calls</text>
+
+  <!-- API to Backend Services -->
+  <line x1="790" y1="350" x2="790" y2="420" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="800" y="385" font-family="georgia, sans-serif" font-size="10" fill="#475569">Route Handlers</text>
+
+  <!-- Backend to Database -->
+  <line x1="150" y1="490" x2="150" y2="635" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="310" y1="490" x2="325" y2="635" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="470" y1="490" x2="495" y2="635" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="630" y1="490" x2="665" y2="635" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="790" y1="490" x2="835" y2="635" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="950" y1="490" x2="1005" y2="635" stroke="#475569" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Backend to External Services -->
+  <line x1="1270" y1="490" x2="240" y2="845" stroke="#e11d48" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="750" y="670" font-family="georgia, sans-serif" font-size="10" fill="#e11d48">Email Service</text>
+
+  <line x1="1110" y1="490" x2="440" y2="845" stroke="#059669" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="775" y="650" font-family="georgia, sans-serif" font-size="10" fill="#059669">File Storage</text>
+
+  <!-- Security Layer Connection -->
+  <line x1="150" y1="490" x2="640" y2="845" stroke="#9333ea" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="400" y="670" font-family="georgia, sans-serif" font-size="10" fill="#9333ea">Authentication</text>
+
+  <!-- Database Relationships -->
+  <path d="M 230 675 Q 290 675 250 675" stroke="#FF9800" stroke-width="1" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="240" y="665" font-family="georgia, sans-serif" font-size="8" fill="#FF9800">FK</text>
+
+  <path d="M 400 675 Q 450 675 420 675" stroke="#FF9800" stroke-width="1" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="410" y="665" font-family="georgia, sans-serif" font-size="8" fill="#FF9800">FK</text>
+
+  <path d="M 740 675 Q 790 675 760 675" stroke="#FF9800" stroke-width="1" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="750" y="665" font-family="georgia, sans-serif" font-size="8" fill="#FF9800">FK</text>
+
+  <path d="M 910 675 Q 960 675 930 675" stroke="#FF9800" stroke-width="1" fill="none" marker-end="url(#arrowhead)"/>
+  <text x="920" y="665" font-family="georgia, sans-serif" font-size="8" fill="#FF9800">FK</text>
+
+  <!-- Key Features Box -->
+  <rect x="50" y="940" width="600" height="50" rx="5" fill="#f0f9ff" stroke="#0284c7" stroke-width="1"/>
+  <text x="60" y="960" font-family="georgia, sans-serif" font-size="14" font-weight="bold" fill="#0284c7">Key Features:</text>
+  <text x="60" y="975" font-family="georgia, sans-serif" font-size="11" fill="#64748b">• JWT Authentication • Role-based Access Control • Email Verification • Advanced Coupon Validation</text>
+
+  <!-- Technology Stack Box -->
+  <rect x="670" y="940" width="680" height="50" rx="5" fill="#f0fdf4" stroke="#16a34a" stroke-width="1"/>
+  <text x="680" y="960" font-family="georgia, sans-serif" font-size="14" font-weight="bold" fill="#16a34a">Technology Stack:</text>
+  <text x="680" y="975" font-family="georgia, sans-serif" font-size="11" fill="#64748b">Frontend: React + TailwindCSS | Backend: Flask + SQLAlchemy | Database: SQLite | Auth: JWT + BCrypt</text>
+</svg>
