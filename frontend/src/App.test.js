@@ -56,7 +56,7 @@ jest.mock('./pages/admin/Settings', () => () => <div data-testid="settings-page"
 
 test('renders app without crashing', () => {
   render(<App />);
-  
+
   // Check that the app renders without crashing
   expect(screen.getByTestId('auth-provider')).toBeInTheDocument();
   expect(screen.getByTestId('toaster')).toBeInTheDocument();
@@ -64,7 +64,7 @@ test('renders app without crashing', () => {
 
 test('app has correct structure', () => {
   render(<App />);
-  
+
   // Check that the main app div exists
   const appDiv = document.querySelector('.App');
   expect(appDiv).toBeInTheDocument();
