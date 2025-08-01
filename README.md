@@ -329,7 +329,7 @@ All coupon endpoints now return enhanced fields:
 ```env
 SECRET_KEY=your-secret-key
 JWT_SECRET_KEY=your-jwt-secret
-DATABASE_URL=sqlite:///coupon_system.db
+DATABASE_URL=sqlite:///coupon.db
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USERNAME=your-email@gmail.com

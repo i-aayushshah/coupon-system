@@ -162,7 +162,7 @@ class ModelTestCase(unittest.TestCase):
         # We need to set it manually for expired coupons
         coupon.is_active = False
         db.session.commit()
-        
+
         self.assertFalse(coupon.is_active)
         self.assertTrue(coupon.is_expired())
 
@@ -200,7 +200,7 @@ class ModelTestCase(unittest.TestCase):
         # We need to set it manually for fully used coupons
         coupon.is_active = False
         db.session.commit()
-        
+
         self.assertFalse(coupon.is_active)
         self.assertTrue(coupon.is_fully_used())
 
