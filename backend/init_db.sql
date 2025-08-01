@@ -3,6 +3,102 @@
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Create tables (these will be created by SQLAlchemy, but we'll create them here for Docker setup)
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(80) UNIQUE NOT NULL,
+    email VARCHAR(120) UNIQUE NOT NULL,
+    password_hash VARCHAR(128) NOT NULL,
+    first_name VARCHAR(80),
+    last_name VARCHAR(80),
+    phone VARCHAR(20),
+    is_admin BOOLEAN DEFAULT FALSE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    email_verification_token VARCHAR(128),
+    email_verification_expires TIMESTAMP,
+    password_reset_token VARCHAR(128),
+    password_reset_expires TIMESTAMP,
+    last_login TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS coupons (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    discount_type VARCHAR(20) NOT NULL CHECK (discount_type IN ('percentage', 'fixed')),
+    discount_value DECIMAL(10,2) NOT NULL,
+    is_public BOOLEAN DEFAULT FALSE,
+    max_uses INTEGER DEFAULT 1,
+    current_uses INTEGER DEFAULT 0,
+    start_date TIMESTAMP NOT NULL,
+    end_date TIMESTAMP NOT NULL,
+    minimum_order_value DECIMAL(10,2) DEFAULT 0,
+    applicable_categories TEXT[],
+    maximum_discount_amount DECIMAL(10,2),
+    first_time_user_only BOOLEAN DEFAULT FALSE,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    category VARCHAR(50),
+    brand VARCHAR(50),
+    sku VARCHAR(50) UNIQUE,
+    stock_quantity INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    image_url VARCHAR(255),
+    minimum_order_value DECIMAL(10,2) DEFAULT 0,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    subtotal DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    final_total DECIMAL(10,2) NOT NULL,
+    coupon_code_used VARCHAR(50),
+    coupon_id INTEGER REFERENCES coupons(id),
+    order_status VARCHAR(20) DEFAULT 'pending',
+    shipping_address TEXT,
+    payment_method VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL REFERENCES orders(id),
+    product_id INTEGER NOT NULL REFERENCES products(id),
+    quantity INTEGER NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    line_total DECIMAL(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS redemptions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    coupon_id INTEGER NOT NULL REFERENCES coupons(id),
+    order_id INTEGER REFERENCES orders(id),
+    original_amount DECIMAL(10,2) NOT NULL,
+    final_amount DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) NOT NULL,
+    discount_applied DECIMAL(10,2) NOT NULL,
+    products_applied_to TEXT[],
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
@@ -13,7 +109,7 @@ CREATE INDEX IF NOT EXISTS idx_coupons_end_date ON coupons(end_date);
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
 CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
 CREATE INDEX IF NOT EXISTS idx_redemptions_user_id ON redemptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_redemptions_coupon_id ON redemptions(coupon_id);
 
@@ -30,7 +126,7 @@ SELECT
     u.id,
     u.username,
     COUNT(DISTINCT o.id) as total_orders,
-    COALESCE(SUM(o.total_amount), 0) as total_spent,
+    COALESCE(SUM(o.final_total), 0) as total_spent,
     COUNT(DISTINCT r.id) as total_redemptions,
     COALESCE(SUM(r.discount_amount), 0) as total_savings
 FROM users u
@@ -44,7 +140,7 @@ SELECT
     COUNT(DISTINCT c.id) as total_coupons,
     COUNT(DISTINCT p.id) as total_products,
     COUNT(DISTINCT o.id) as total_orders,
-    COALESCE(SUM(o.total_amount), 0) as total_revenue,
+    COALESCE(SUM(o.final_total), 0) as total_revenue,
     COUNT(DISTINCT r.id) as total_redemptions,
     COALESCE(SUM(r.discount_amount), 0) as total_discounts_given
 FROM users u
@@ -68,6 +164,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for coupon usage tracking
+DROP TRIGGER IF EXISTS trigger_update_coupon_usage ON redemptions;
 CREATE TRIGGER trigger_update_coupon_usage
     AFTER INSERT ON redemptions
     FOR EACH ROW
@@ -192,6 +289,5 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO products (name, description, price, category, brand, sku, stock_quantity, is_active, image_url, minimum_order_value, created_by, created_at)
 VALUES
     ('iPhone 13', 'Latest iPhone with advanced features', 999.99, 'Electronics', 'Apple', 'IPHONE13-001', 50, true, '/uploads/iphone13.jpg', 10.00, 1, CURRENT_TIMESTAMP),
-    ('Samsung TV', '4K Smart TV with amazing picture quality', 799.99, 'Electronics', 'Samsung', 'TV-SAMSUNG-001', 25, true, '/uploads/samsung-tv.jpg', 10.00, 1, CURRENT_TIMESTAMP),
-    ('Nike Shoes', 'Comfortable running shoes', 89.99, 'Clothing', 'Nike', 'SHOES-NIKE-001', 100, true, '/uploads/nike-shoes.jpg', 10.00, 1, CURRENT_TIMESTAMP)
+    ('Samsung TV', '4K Smart TV with amazing picture quality', 799.99, 'Electronics', 'Samsung', 'TV-SAMSUNG-001', 25, true, '/uploads/samsung-tv.jpg', 10.00, 1, CURRENT_TIMESTAMP)
 ON CONFLICT (sku) DO NOTHING;
