@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 
 // Mock the useAuth hook without importing the actual module
 const mockUseAuth = jest.fn();
@@ -33,11 +32,9 @@ describe('ProtectedRoute', () => {
     });
 
     render(
-      <BrowserRouter>
-        <MockProtectedRoute>
-          <div>Protected Content</div>
-        </MockProtectedRoute>
-      </BrowserRouter>
+      <MockProtectedRoute>
+        <div>Protected Content</div>
+      </MockProtectedRoute>
     );
     
     // The component should redirect, so we shouldn't see the protected content
@@ -53,11 +50,9 @@ describe('ProtectedRoute', () => {
     });
 
     render(
-      <BrowserRouter>
-        <MockProtectedRoute>
-          <div>Protected Content</div>
-        </MockProtectedRoute>
-      </BrowserRouter>
+      <MockProtectedRoute>
+        <div>Protected Content</div>
+      </MockProtectedRoute>
     );
     
     // Should see the protected content
@@ -73,11 +68,9 @@ describe('ProtectedRoute', () => {
     });
 
     render(
-      <BrowserRouter>
-        <MockProtectedRoute>
-          <div>Protected Content</div>
-        </MockProtectedRoute>
-      </BrowserRouter>
+      <MockProtectedRoute>
+        <div>Protected Content</div>
+      </MockProtectedRoute>
     );
     
     // Should show loading state

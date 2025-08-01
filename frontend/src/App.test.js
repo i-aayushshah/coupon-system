@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 
 // Mock all problematic modules
@@ -56,11 +55,7 @@ jest.mock('./pages/admin/CouponView', () => () => <div data-testid="coupon-view-
 jest.mock('./pages/admin/Settings', () => () => <div data-testid="settings-page">Settings Page</div>);
 
 test('renders app without crashing', () => {
-  render(
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  );
+  render(<App />);
   
   // Check that the app renders without crashing
   expect(screen.getByTestId('auth-provider')).toBeInTheDocument();
@@ -68,11 +63,7 @@ test('renders app without crashing', () => {
 });
 
 test('app has correct structure', () => {
-  render(
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  );
+  render(<App />);
   
   // Check that the main app div exists
   const appDiv = document.querySelector('.App');
@@ -82,10 +73,6 @@ test('app has correct structure', () => {
 test('app renders without errors', () => {
   // This test ensures the app can be rendered without throwing errors
   expect(() => {
-    render(
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    );
+    render(<App />);
   }).not.toThrow();
 });
