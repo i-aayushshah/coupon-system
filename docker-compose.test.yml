@@ -16,6 +16,11 @@ services:
       - "5433:5432"
     networks:
       - test_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_coupon_system"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Test Backend
   test-backend:
