@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey, Numeric, Text
 from app import db
@@ -26,8 +26,8 @@ class Coupon(db.Model):
     maximum_discount_amount = Column(Numeric(10, 2))  # Cap for percentage discounts
     first_time_user_only = Column(Boolean, default=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
     creator = relationship('User', back_populates='coupons')
     redemptions = relationship('Redemption', back_populates='coupon', cascade='all, delete-orphan')
@@ -50,6 +50,16 @@ class Coupon(db.Model):
             self.applicable_categories = json.dumps(categories)
         else:
             self.applicable_categories = None
+
+    def is_expired(self):
+        """Check if coupon is expired"""
+        if not self.end_date:
+            return False
+        return self.end_date < datetime.datetime.utcnow()
+
+    def is_fully_used(self):
+        """Check if coupon usage limit is reached"""
+        return self.current_uses >= self.max_uses
 
     def to_dict(self):
         return {

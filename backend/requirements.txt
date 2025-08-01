@@ -5,3 +5,5 @@ Flask-Mail
 Flask-CORS
 python-dotenv
 bcrypt
+pytest
+pytest-cov

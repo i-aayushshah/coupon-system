@@ -21,9 +21,13 @@ from app.routes.user import bp as user_bp
 from app.routes.products import bp as products_bp
 from app.routes.cart import bp as cart_bp
 
-def create_app():
+def create_app(test_config=None):
     app = Flask(__name__)
-    app.config.from_object('app.config.Config')
+
+    if test_config is None:
+        app.config.from_object('app.config.Config')
+    else:
+        app.config.update(test_config)
 
     # Configure CORS properly
     CORS(app, origins=["http://localhost:3000"], supports_credentials=True)

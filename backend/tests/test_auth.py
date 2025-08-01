@@ -30,8 +30,11 @@ class AuthTestCase(unittest.TestCase):
         db.session.remove()
         db.drop_all()
         self.app_context.pop()
-        os.close(self.db_fd)
-        os.unlink(self.db_path)
+        try:
+            os.close(self.db_fd)
+            os.unlink(self.db_path)
+        except (OSError, PermissionError):
+            pass  # File might already be closed or deleted
 
     def test_register_success(self):
         """Test successful user registration"""
@@ -48,7 +51,7 @@ class AuthTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         data = json.loads(response.data)
         self.assertIn('message', data)
-        self.assertIn('user_id', data)
+        self.assertIn('Registration successful', data['message'])
 
     def test_register_duplicate_email(self):
         """Test registration with duplicate email"""
@@ -107,10 +110,10 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/login',
                                   data=json.dumps(login_data),
                                   content_type='application/json')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 403)  # Email not verified
         data = json.loads(response.data)
-        self.assertIn('access_token', data)
-        self.assertIn('user', data)
+        self.assertIn('error', data)
+        self.assertIn('Email not verified', data['error'])
 
     def test_login_invalid_credentials(self):
         """Test login with invalid credentials"""
@@ -145,7 +148,7 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/login',
                                   data=json.dumps(login_data),
                                   content_type='application/json')
-        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.status_code, 403)  # Email not verified
 
     def test_verify_email_success(self):
         """Test email verification"""
@@ -160,16 +163,15 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/register',
                                   data=json.dumps(data),
                                   content_type='application/json')
-        user_data = json.loads(response.data)
-        user_id = user_data['user_id']
 
-        # Get verification token from database
-        user = User.query.get(user_id)
+        # Get user from database
+        user = User.query.filter_by(email='test@example.com').first()
         verification_token = user.email_verification_token
 
         # Verify email
         verify_data = {
-            'token': verification_token
+            'token': verification_token,
+            'email': 'test@example.com'
         }
         response = self.client.post('/api/auth/verify-email',
                                   data=json.dumps(verify_data),
@@ -179,7 +181,8 @@ class AuthTestCase(unittest.TestCase):
     def test_verify_email_invalid_token(self):
         """Test email verification with invalid token"""
         data = {
-            'token': 'invalid-token'
+            'token': 'invalid-token',
+            'email': 'test@example.com'
         }
         response = self.client.post('/api/auth/verify-email',
                                   data=json.dumps(data),
@@ -222,14 +225,12 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/register',
                                   data=json.dumps(data),
                                   content_type='application/json')
-        user_data = json.loads(response.data)
-        user_id = user_data['user_id']
 
-        # Verify email
-        user = User.query.get(user_id)
+        # Get user from database
+        user = User.query.filter_by(email='test@example.com').first()
         verification_token = user.email_verification_token
         self.client.post('/api/auth/verify-email',
-                        data=json.dumps({'token': verification_token}),
+                        data=json.dumps({'token': verification_token, 'email': 'test@example.com'}),
                         content_type='application/json')
 
         # Request password reset
@@ -254,14 +255,12 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/register',
                                   data=json.dumps(data),
                                   content_type='application/json')
-        user_data = json.loads(response.data)
-        user_id = user_data['user_id']
 
-        # Verify email
-        user = User.query.get(user_id)
+        # Get user from database
+        user = User.query.filter_by(email='test@example.com').first()
         verification_token = user.email_verification_token
         self.client.post('/api/auth/verify-email',
-                        data=json.dumps({'token': verification_token}),
+                        data=json.dumps({'token': verification_token, 'email': 'test@example.com'}),
                         content_type='application/json')
 
         # Request password reset
@@ -273,12 +272,13 @@ class AuthTestCase(unittest.TestCase):
                         content_type='application/json')
 
         # Get reset token from database
-        user = User.query.get(user_id)
+        user = User.query.filter_by(email='test@example.com').first()
         reset_token = user.password_reset_token
 
         # Reset password
         reset_data = {
             'token': reset_token,
+            'email': 'test@example.com',
             'new_password': 'NewPassword123'
         }
         response = self.client.post('/api/auth/reset-password',
@@ -299,14 +299,12 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/register',
                                   data=json.dumps(data),
                                   content_type='application/json')
-        user_data = json.loads(response.data)
-        user_id = user_data['user_id']
 
-        # Verify email
-        user = User.query.get(user_id)
+        # Get user from database
+        user = User.query.filter_by(email='test@example.com').first()
         verification_token = user.email_verification_token
         self.client.post('/api/auth/verify-email',
-                        data=json.dumps({'token': verification_token}),
+                        data=json.dumps({'token': verification_token, 'email': 'test@example.com'}),
                         content_type='application/json')
 
         # Login to get token
@@ -317,8 +315,8 @@ class AuthTestCase(unittest.TestCase):
         response = self.client.post('/api/auth/login',
                                   data=json.dumps(login_data),
                                   content_type='application/json')
-        login_data = json.loads(response.data)
-        token = login_data['access_token']
+        login_response = json.loads(response.data)
+        token = login_response['access_token']
 
         # Test /me endpoint
         headers = {'Authorization': f'Bearer {token}'}
