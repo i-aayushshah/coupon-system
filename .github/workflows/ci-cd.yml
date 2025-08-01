@@ -143,9 +143,9 @@ jobs:
 
     - name: Test Docker Compose
       run: |
-        docker-compose -f docker-compose.test.yml up -d
+        docker compose -f docker-compose.test.yml up -d
         sleep 30
-        docker-compose -f docker-compose.test.yml down
+        docker compose -f docker-compose.test.yml down
 
   # Deploy to Staging
   deploy-staging:
@@ -162,7 +162,7 @@ jobs:
         echo "Deploying to staging environment..."
         # Add your staging deployment commands here
         # Example: kubectl apply -f k8s/staging/
-        # Example: docker-compose -f docker-compose.staging.yml up -d
+        # Example: docker compose -f docker-compose.staging.yml up -d
 
   # Deploy to Production
   deploy-production:
@@ -179,7 +179,7 @@ jobs:
         echo "Deploying to production environment..."
         # Add your production deployment commands here
         # Example: kubectl apply -f k8s/production/
-        # Example: docker-compose -f docker-compose.production.yml up -d
+        # Example: docker compose -f docker-compose.production.yml up -d
 
   # Notify on Success/Failure
   notify:
